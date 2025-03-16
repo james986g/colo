@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# 脚本版本 - 专为 [您的名字/昵称] 定制
-VERSION='1.0.0'
+# 脚本版本 - 专为 [YourName] 定制
+VERSION='1.0.1'
 AUTHOR="YourName"  # 请替换为您喜欢的名称
 
 # 颜色定义
@@ -24,7 +24,7 @@ check_system() {
     PKG_INSTALL="apt install -y"
   elif [ -f /etc/redhat-release ]; then
     SYS="CentOS"
-    PKG_UPDATE="yum update -y"
+    PKG_UPDATE="yum update -y --disablerepo=cloudflare-warp 2>/dev/null || yum update -y"
     PKG_INSTALL="yum install -y"
   elif [ -f /etc/os-release ] && grep -q "Ubuntu" /etc/os-release; then
     SYS="Ubuntu"
@@ -39,8 +39,8 @@ check_system() {
 # 安装依赖
 install_deps() {
   echo -e "${GREEN}[$AUTHOR] 安装依赖...${NC}"
-  $PKG_UPDATE
-  $PKG_INSTALL wget curl tar iproute2 python3 || { echo -e "${RED}依赖安装失败${NC}"; exit 1; }
+  $PKG_UPDATE || { echo -e "${YELLOW}[$AUTHOR] 更新软件源失败，尝试跳过...${NC}"; }
+  $PKG_INSTALL wget curl tar iproute2 python3 || { echo -e "${RED}[$AUTHOR] 依赖安装失败，请检查网络或软件源${NC}"; exit 1; }
 }
 
 # 安装warp-go
@@ -48,8 +48,8 @@ install_warp_go() {
   if [ ! -f /opt/warp-go/warp-go ]; then
     echo -e "${GREEN}[$AUTHOR] 下载并安装warp-go...${NC}"
     mkdir -p /opt/warp-go
-    wget -O /tmp/warp-go.tar.gz "https://gitlab.com/sasalele/intel-test2/-/raw/main/warp-go/warp-go_1.0.8_linux_amd64.tar.gz" || { echo -e "${RED}下载失败${NC}"; exit 1; }
-    tar -xzf /tmp/warp-go.tar.gz -C /opt/warp-go/ || { echo -e "${RED}解压失败${NC}"; exit 1; }
+    wget -O /tmp/warp-go.tar.gz "https://gitlab.com/sasalele/intel-test2/-/raw/main/warp-go/warp-go_1.0.8_linux_amd64.tar.gz" || { echo -e "${RED}[$AUTHOR] 下载失败${NC}"; exit 1; }
+    tar -xzf /tmp/warp-go.tar.gz -C /opt/warp-go/ || { echo -e "${RED}[$AUTHOR] 解压失败${NC}"; exit 1; }
     chmod +x /opt/warp-go/warp-go
     rm -f /tmp/warp-go.tar.gz
     create_config
