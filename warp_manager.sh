@@ -28,7 +28,6 @@ check_network() {
 install_dependencies() {
   echo -e "${GREEN}安装必要的依赖...${NC}"
   if [ -f /etc/centos-release ]; then
-    # 修复 CentOS 7 EOL 源
     if grep -q "mirrorlist.centos.org" /etc/yum.repos.d/CentOS-Base.repo; then
       echo -e "${GREEN}修复 CentOS 7 EOL 源...${NC}"
       sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo
@@ -49,9 +48,7 @@ install_warp() {
   echo -e "${GREEN}安装 Cloudflare WARP 客户端...${NC}"
   check_network
   if [ -f /etc/centos-release ]; then
-    # 确保 GPG 密钥目录存在
     mkdir -p /etc/pki/rpm-gpg/
-    # 下载并安装 Cloudflare GPG 密钥
     curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg -o /tmp/cloudflare-pubkey.gpg
     if [ $? -ne 0 ]; then
       echo -e "${RED}下载 GPG 密钥失败，请检查网络！${NC}"
@@ -59,7 +56,6 @@ install_warp() {
     fi
     gpg --yes --dearmor -o /etc/pki/rpm-gpg/RPM-GPG-KEY-CLOUDFLARE /tmp/cloudflare-pubkey.gpg
     rm -f /tmp/cloudflare-pubkey.gpg
-    # 配置正确的 Yum 源
     cat > /etc/yum.repos.d/cloudflare-warp.repo << EOF
 [cloudflare-warp]
 name=Cloudflare WARP
@@ -221,4 +217,157 @@ uninstall_warp() {
   systemctl disable warp-svc warp-keepalive.service
   if [ -f /etc/centos-release ]; then
     yum remove -y cloudflare-warp
-    rm -f /etc/yum.repos.d/cloud
+    rm -f /etc/yum.repos.d/cloudflare-warp.repo /etc/pki/rpm-gpg/RPM-GPG-KEY-CLOUDFLARE
+  elif [ -f /etc/debian_version ]; then
+    apt remove -y cloudflare-warp
+    rm -f /etc/apt/sources.list.d/cloudflare-warp.list
+  fi
+  rm -f /usr/local/bin/warp-keepalive.sh /etc/systemd/system/warp-keepalive.service
+  systemctl daemon-reload
+  echo -e "${GREEN}WARP 已完全卸载！${NC}"
+}
+
+# 强制切换到 WARP IPv6
+switch_to_ipv6() {
+  echo -e "${GREEN}强制切换到 WARP IPv6...${NC}"
+  register_warp
+  warp-cli disconnect
+  warp-cli set-mode proxy
+  warp-cli set-custom-endpoint "[2606:4700:d0::a29f:c001]:2408"
+  warp-cli connect
+  optimize_endpoint
+  echo "allowed-ips ::/0" > /etc/wireguard/warp.conf
+  warp-cli set-config /etc/wireguard/warp.conf
+  setup_keepalive
+  verify_warp
+}
+
+# 强制切换到 WARP IPv4
+switch_to_ipv4() {
+  echo -e "${GREEN}强制切换到 WARP IPv4...${NC}"
+  register_warp
+  warp-cli disconnect
+  warp-cli set-mode proxy
+  warp-cli set-custom-endpoint "162.159.193.10:2408"
+  warp-cli connect
+  optimize_endpoint
+  echo "allowed-ips 0.0.0.0/0" > /etc/wireguard/warp.conf
+  warp-cli set-config /etc/wireguard/warp.conf
+  setup_keepalive
+  verify_warp
+}
+
+# 强制切换到 WARP 双栈
+switch_to_dualstack() {
+  echo -e "${GREEN}强制切换到 WARP 双栈...${NC}"
+  register_warp
+  warp-cli disconnect
+  warp-cli set-mode proxy
+  warp-cli set-custom-endpoint "162.159.193.10:2408"
+  warp-cli connect
+  optimize_endpoint
+  echo "allowed-ips 0.0.0.0/0,::/0" > /etc/wireguard/warp.conf
+  warp-cli set-config /etc/wireguard/warp.conf
+  setup_keepalive
+  verify_warp
+}
+
+# 更换 WARP IP
+change_warp_ip() {
+  echo -e "${GREEN}更换 WARP IP...${NC}"
+  warp-cli disconnect
+  warp-cli delete
+  register_warp
+  warp-cli connect
+  optimize_endpoint
+  setup_keepalive
+  verify_warp
+}
+
+# 创建快捷命令
+setup_shortcut() {
+  echo -e "${GREEN}创建快捷命令 'warpctl'...${NC}"
+  mv "$0" /usr/local/bin/warpctl.sh
+  chmod +x /usr/local/bin/warpctl.sh
+  ln -sf /usr/local/bin/warpctl.sh /usr/bin/warpctl
+  echo -e "${GREEN}快捷命令已创建！再次运行可使用 'warpctl'${NC}"
+}
+
+# 主菜单
+menu() {
+  clear
+  echo -e "${GREEN}===== WARP 一键管理脚本 =====${NC}"
+  echo "1. 安装 WARP 并优化马来西亚网络"
+  echo "2. 强制切换到 WARP IPv6"
+  echo "3. 强制切换到 WARP IPv4"
+  echo "4. 强制切换到 WARP 双栈"
+  echo "5. 使用 WARP+ 账户"
+  echo "6. 更换 WARP IP"
+  echo "7. 一键卸载 WARP"
+  echo "0. 退出"
+  read -p "请选择操作 [0-7]: " choice
+
+  case $choice in
+    1)
+      install_dependencies
+      install_warp
+      register_warp
+      warp-cli connect
+      optimize_endpoint
+      setup_keepalive
+      verify_warp
+      setup_shortcut
+      ;;
+    2)
+      install_dependencies
+      install_warp
+      switch_to_ipv6
+      setup_shortcut
+      ;;
+    3)
+      install_dependencies
+      install_warp
+      switch_to_ipv4
+      setup_shortcut
+      ;;
+    4)
+      install_dependencies
+      install_warp
+      switch_to_dualstack
+      setup_shortcut
+      ;;
+    5)
+      install_dependencies
+      install_warp
+      register_warp
+      upgrade_to_warp_plus
+      optimize_endpoint
+      setup_keepalive
+      verify_warp
+      setup_shortcut
+      ;;
+    6)
+      install_dependencies
+      install_warp
+      change_warp_ip
+      setup_shortcut
+      ;;
+    7)
+      uninstall_warp
+      setup_shortcut
+      ;;
+    0)
+      echo -e "${GREEN}退出脚本${NC}"
+      setup_shortcut
+      exit 0
+      ;;
+    *)
+      echo -e "${RED}无效选项，请输入 0-7！${NC}"
+      sleep 2
+      menu
+      ;;
+  esac
+}
+
+# 执行主菜单
+menu
