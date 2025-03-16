@@ -27,7 +27,6 @@ if [ "$CHOICE" == "1" ]; then
   if [ -f /usr/local/bin/cloudflared ] && [ -x /usr/local/bin/cloudflared ]; then
     echo -e "${GREEN}检测到已安装 cloudflared，跳过安装步骤...${NC}"
   else
-    # 下载并安装 cloudflared
     echo -e "${GREEN}正在安装 Cloudflare cloudflared...${NC}"
     wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared
     chmod +x /usr/local/bin/cloudflared
@@ -44,8 +43,12 @@ if [ "$CHOICE" == "1" ]; then
   fi
 
   # 获取用户输入
+  echo -e "${GREEN}请输入你的 Cloudflare 账户 ID (Account Tag):${NC}"
+  read -p "Account Tag: " ACCOUNT_TAG
   echo -e "${GREEN}请输入你的 Cloudflare Zero Trust 隧道令牌 (Tunnel Token):${NC}"
   read -p "Tunnel Token: " TUNNEL_TOKEN
+  echo -e "${GREEN}请输入你的 VPS 域名 (例如 vps.example.com):${NC}"
+  read -p "Hostname: " HOSTNAME
   echo -e "${GREEN}请输入你的 VPS 私有 IP 范围 (例如 192.168.1.0/24):${NC}"
   read -p "私有 IP 范围: " PRIVATE_IP_RANGE
 
@@ -58,12 +61,12 @@ tunnel: vps-tunnel
 credentials-file: /etc/cloudflared/credentials.json
 ingress:
   - service: http://localhost:80
-    hostname: sandbox.shinjiru.ip-ddns.com # 请替换为你的域名
+    hostname: $HOSTNAME
   - service: http_status:404
 EOF
 
   # 保存隧道令牌
-  echo "{\"TunnelID\":\"vps-tunnel\",\"AccountTag\":\"YOUR_ACCOUNT_TAG\",\"TunnelSecret\":\"$TUNNEL_TOKEN\"}" > /etc/cloudflared/credentials.json
+  echo "{\"TunnelID\":\"vps-tunnel\",\"AccountTag\":\"$ACCOUNT_TAG\",\"TunnelSecret\":\"$TUNNEL_TOKEN\"}" > /etc/cloudflared/credentials.json
   chmod 600 /etc/cloudflared/credentials.json
 
   # 创建 systemd 服务文件
@@ -89,10 +92,14 @@ EOF
 
   # 检查服务状态
   if systemctl is-active cloudflared &> /dev/null; then
-      echo -e "${GREEN}Cloudflare Tunnel 已成功启动！${NC}"
+    echo -e "${GREEN}Cloudflare Tunnel 已成功启动！${NC}"
   else
-      echo -e "${RED}Cloudflare Tunnel 启动失败，请检查配置！${NC}"
-      exit 1
+    echo -e "${RED}Cloudflare Tunnel 启动失败，请检查以下内容：${NC}"
+    echo "1. 查看服务状态：systemctl status cloudflared"
+    echo "2. 手动运行检查错误：/usr/local/bin/cloudflared --config /etc/cloudflared/config.yml tunnel run"
+    echo "3. 确认 /etc/cloudflared/config.yml 和 credentials.json 中的配置无误"
+    echo "4. 检查网络连接：ping 162.159.192.1 或 curl -I https://cloudflare.com"
+    exit 1
   fi
 
   # 配置 Zero Trust 私有网络（需要在 Cloudflare 仪表板手动完成的部分）
@@ -125,10 +132,10 @@ elif [ "$CHOICE" == "2" ]; then
 
   # 检查卸载是否成功
   if [ ! -f /usr/local/bin/cloudflared ] && [ ! -d /etc/cloudflared ]; then
-      echo -e "${GREEN}Cloudflare Zero Trust 已成功卸载！${NC}"
+    echo -e "${GREEN}Cloudflare Zero Trust 已成功卸载！${NC}"
   else
-      echo -e "${RED}卸载失败，请手动检查残留文件！${NC}"
-      exit 1
+    echo -e "${RED}卸载失败，请手动检查残留文件！${NC}"
+    exit 1
   fi
 
 else
