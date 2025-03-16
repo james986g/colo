@@ -1,8 +1,8 @@
 首次安装
 ```
-wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/cf_zt_centos7.sh -O cf_zt_centos7.sh
-chmod +x cf_zt_centos7.sh
-./cf_zt_centos7.sh
+wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/warp_manager.sh -O warp_manager.sh
+chmod +x warp_manager.sh
+./warp_manager.sh
 ```
 手动安装cloudflared-linux-amd64
 ```
