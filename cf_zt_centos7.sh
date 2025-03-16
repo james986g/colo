@@ -62,7 +62,7 @@ if [ "$CHOICE" == "1" ]; then
 tunnel: $TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
 ingress:
-  - service: http://localhost:80
+  - service: http://localhost:1234
     hostname: $HOSTNAME
   - service: http_status:404
 EOF
