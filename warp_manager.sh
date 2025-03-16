@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 一键脚本：安装 WARP 并优化网络，支持多种账户、IP 更换和快捷命令
+# 一键脚本：安装 WARP 并优化马来西亚网络，支持多种账户、IP 更换和快捷命令
 # 作者：为个人使用定制
 # 当前日期：2025-03-16
 
@@ -19,6 +19,13 @@ fi
 install_dependencies() {
   echo -e "${GREEN}安装必要的依赖...${NC}"
   if [ -f /etc/centos-release ]; then
+    # 检查并修复 CentOS 7 的 Yum 源
+    if grep -q "mirrorlist.centos.org" /etc/yum.repos.d/CentOS-Base.repo; then
+      echo -e "${GREEN}修复 CentOS 7 EOL 源...${NC}"
+      sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo
+      sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-Base.repo
+      yum makecache
+    fi
     yum install -y curl jq iputils wireguard-tools bc
   elif [ -f /etc/debian_version ]; then
     apt update -y && apt install -y curl jq iputils-ping wireguard-tools bc
@@ -32,8 +39,16 @@ install_dependencies() {
 install_warp() {
   echo -e "${GREEN}安装 Cloudflare WARP 客户端...${NC}"
   if [ -f /etc/centos-release ]; then
-    curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-    echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ fedora main" > /etc/yum.repos.d/cloudflare-warp.repo
+    # 为 CentOS 添加 Cloudflare WARP 的 Yum 源
+    curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor -o /etc/pki/rpm-gpg/RPM-GPG-KEY-CLOUDFLARE
+    cat > /etc/yum.repos.d/cloudflare-warp.repo << EOF
+[cloudflare-warp]
+name=Cloudflare WARP
+baseurl=https://pkg.cloudflareclient.com/yum/rhel/\$releasever/\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CLOUDFLARE
+EOF
     yum install -y cloudflare-warp
   elif [ -f /etc/debian_version ]; then
     curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
@@ -186,7 +201,7 @@ uninstall_warp() {
   systemctl disable warp-svc warp-keepalive.service
   if [ -f /etc/centos-release ]; then
     yum remove -y cloudflare-warp
-    rm -f /etc/yum.repos.d/cloudflare-warp.repo
+    rm -f /etc/yum.repos.d/cloudflare-warp.repo /etc/pki/rpm-gpg/RPM-GPG-KEY-CLOUDFLARE
   elif [ -f /etc/debian_version ]; then
     apt remove -y cloudflare-warp
     rm -f /etc/apt/sources.list.d/cloudflare-warp.list
