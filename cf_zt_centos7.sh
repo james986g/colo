@@ -42,6 +42,21 @@ if [ "$CHOICE" == "1" ]; then
     echo -e "${GREEN}cloudflared 已成功安装或验证通过，版本：$(/usr/local/bin/cloudflared --version)${NC}"
   fi
 
+  # 检查或生成 cert.pem
+  if [ ! -f /etc/cloudflared/cert.pem ]; then
+    echo -e "${GREEN}未找到 cert.pem，正在生成...${NC}"
+    echo "请在浏览器中完成 Cloudflare 登录授权，完成后将 cert.pem 上传至 /etc/cloudflared/cert.pem"
+    /usr/local/bin/cloudflared login
+    echo -e "${GREEN}请将生成的 cert.pem 移动到 /etc/cloudflared/cert.pem（或手动上传），然后按 Enter 继续...${NC}"
+    read -p "按 Enter 继续..."
+    if [ ! -f /etc/cloudflared/cert.pem ]; then
+      echo -e "${RED}未找到 /etc/cloudflared/cert.pem，请手动上传后重新运行脚本！${NC}"
+      exit 1
+    fi
+  else
+    echo -e "${GREEN}检测到 /etc/cloudflared/cert.pem，已存在，跳过生成步骤...${NC}"
+  fi
+
   # 获取用户输入
   echo -e "${GREEN}请输入你的 Cloudflare 账户 ID (Account Tag):${NC}"
   read -p "Account Tag: " ACCOUNT_TAG
@@ -61,6 +76,7 @@ if [ "$CHOICE" == "1" ]; then
   cat << EOF > /etc/cloudflared/config.yml
 tunnel: $TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
+origincert: /etc/cloudflared/cert.pem
 ingress:
   - service: http://localhost:1234
     hostname: $HOSTNAME
@@ -71,16 +87,14 @@ EOF
   echo "{\"TunnelID\":\"$TUNNEL_ID\",\"AccountTag\":\"$ACCOUNT_TAG\",\"TunnelSecret\":\"$TUNNEL_TOKEN\"}" > /etc/cloudflared/credentials.json
   chmod 600 /etc/cloudflared/credentials.json
 
-  # 验证配置文件
-  echo -e "${GREEN}正在验证配置文件...${NC}"
-  if ! /usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml info &> /dev/null; then
-    echo -e "${RED}配置文件验证失败，请检查以下内容：${NC}"
-    echo "1. 确认 /etc/cloudflared/config.yml 和 credentials.json 中的 Tunnel ID、Account Tag、Tunnel Token 是否正确"
-    echo "2. 运行：/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml info 查看详细错误"
-    exit 1
-  else
-    echo -e "${GREEN}配置文件验证通过！${NC}"
-  fi
+  # 显示配置文件内容供用户检查
+  echo -e "${GREEN}以下是生成的配置文件内容，请确认无误：${NC}"
+  echo "---- /etc/cloudflared/config.yml ----"
+  cat /etc/cloudflared/config.yml
+  echo "---- /etc/cloudflared/credentials.json ----"
+  cat /etc/cloudflared/credentials.json
+  echo -e "${GREEN}如果以上内容有误，请按 Ctrl+C 退出并重新运行脚本！${NC}"
+  read -p "按 Enter 继续..."
 
   # 创建 systemd 服务文件
   cat << EOF > /etc/systemd/system/cloudflared.service
@@ -113,7 +127,8 @@ EOF
     echo "2. 查看日志：journalctl -u cloudflared.service"
     echo "3. 手动运行检查错误：/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run --loglevel debug"
     echo "4. 确认 /etc/cloudflared/config.yml 和 credentials.json 中的配置无误"
-    echo "5. 检查网络连接：ping 162.159.192.1 或 curl -I https://cloudflare.com"
+    echo "5. 检查 /etc/cloudflared/cert.pem 是否存在且有效"
+    echo "6. 检查网络连接：ping 162.159.192.1 或 curl -I https://cloudflare.com"
     exit 1
   fi
 
