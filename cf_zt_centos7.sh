@@ -62,7 +62,7 @@ if [ "$CHOICE" == "1" ]; then
 tunnel: $TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
 ingress:
-  - service: http://localhost:1234
+  - service: http://localhost:80
     hostname: $HOSTNAME
   - service: http_status:404
 EOF
@@ -71,6 +71,17 @@ EOF
   echo "{\"TunnelID\":\"$TUNNEL_ID\",\"AccountTag\":\"$ACCOUNT_TAG\",\"TunnelSecret\":\"$TUNNEL_TOKEN\"}" > /etc/cloudflared/credentials.json
   chmod 600 /etc/cloudflared/credentials.json
 
+  # 验证配置文件
+  echo -e "${GREEN}正在验证配置文件...${NC}"
+  if ! /usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml info &> /dev/null; then
+    echo -e "${RED}配置文件验证失败，请检查以下内容：${NC}"
+    echo "1. 确认 /etc/cloudflared/config.yml 和 credentials.json 中的 Tunnel ID、Account Tag、Tunnel Token 是否正确"
+    echo "2. 运行：/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml info 查看详细错误"
+    exit 1
+  else
+    echo -e "${GREEN}配置文件验证通过！${NC}"
+  fi
+
   # 创建 systemd 服务文件
   cat << EOF > /etc/systemd/system/cloudflared.service
 [Unit]
@@ -78,8 +89,9 @@ Description=Cloudflare Tunnel
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/cloudflared --config /etc/cloudflared/config.yml tunnel run --loglevel debug
-Restart=on-failure
+ExecStart=/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run --loglevel debug
+Restart=always
+RestartSec=5
 User=root
 
 [Install]
@@ -99,7 +111,7 @@ EOF
     echo -e "${RED}Cloudflare Tunnel 启动失败，请检查以下内容：${NC}"
     echo "1. 查看详细服务状态：systemctl status cloudflared"
     echo "2. 查看日志：journalctl -u cloudflared.service"
-    echo "3. 手动运行检查错误：/usr/local/bin/cloudflared --config /etc/cloudflared/config.yml tunnel run --loglevel debug"
+    echo "3. 手动运行检查错误：/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run --loglevel debug"
     echo "4. 确认 /etc/cloudflared/config.yml 和 credentials.json 中的配置无误"
     echo "5. 检查网络连接：ping 162.159.192.1 或 curl -I https://cloudflare.com"
     exit 1
