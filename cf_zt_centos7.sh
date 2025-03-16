@@ -58,7 +58,7 @@ tunnel: vps-tunnel
 credentials-file: /etc/cloudflared/credentials.json
 ingress:
   - service: http://localhost:80
-    hostname: vps.example.com # 请替换为你的域名
+    hostname: sandbox.shinjiru.ip-ddns.com # 请替换为你的域名
   - service: http_status:404
 EOF
 
