@@ -45,6 +45,8 @@ if [ "$CHOICE" == "1" ]; then
   # 获取用户输入
   echo -e "${GREEN}请输入你的 Cloudflare 账户 ID (Account Tag):${NC}"
   read -p "Account Tag: " ACCOUNT_TAG
+  echo -e "${GREEN}请输入你的隧道 ID (Tunnel ID，在 Zero Trust 的 Tunnels 页面查看):${NC}"
+  read -p "Tunnel ID: " TUNNEL_ID
   echo -e "${GREEN}请输入你的 Cloudflare Zero Trust 隧道令牌 (Tunnel Token):${NC}"
   read -p "Tunnel Token: " TUNNEL_TOKEN
   echo -e "${GREEN}请输入你的 VPS 域名 (例如 vps.example.com):${NC}"
@@ -57,16 +59,16 @@ if [ "$CHOICE" == "1" ]; then
 
   # 创建配置文件
   cat << EOF > /etc/cloudflared/config.yml
-tunnel: vps-tunnel
+tunnel: $TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
 ingress:
-  - service: http://localhost:8443
+  - service: http://localhost:80
     hostname: $HOSTNAME
   - service: http_status:404
 EOF
 
   # 保存隧道令牌
-  echo "{\"TunnelID\":\"vps-tunnel\",\"AccountTag\":\"$ACCOUNT_TAG\",\"TunnelSecret\":\"$TUNNEL_TOKEN\"}" > /etc/cloudflared/credentials.json
+  echo "{\"TunnelID\":\"$TUNNEL_ID\",\"AccountTag\":\"$ACCOUNT_TAG\",\"TunnelSecret\":\"$TUNNEL_TOKEN\"}" > /etc/cloudflared/credentials.json
   chmod 600 /etc/cloudflared/credentials.json
 
   # 创建 systemd 服务文件
@@ -105,7 +107,7 @@ EOF
   # 配置 Zero Trust 私有网络（需要在 Cloudflare 仪表板手动完成的部分）
   echo -e "${GREEN}脚本已完成 VPS 端的配置！${NC}"
   echo -e "${GREEN}请登录 Cloudflare Zero Trust 仪表板完成以下步骤：${NC}"
-  echo "1. 在 'Networks > Tunnels' 中找到你的隧道 'vps-tunnel'"
+  echo "1. 在 'Networks > Tunnels' 中找到你的隧道 '$TUNNEL_ID'"
   echo "2. 在 'Private Networks' 标签中添加私有 IP 范围: $PRIVATE_IP_RANGE"
   echo "3. 在 'Settings > WARP Client > Split Tunnels' 中配置，确保 $PRIVATE_IP_RANGE 通过 WARP 路由"
   echo "4. 下载并安装 WARP 客户端，使用你的 Team Name 登录"
