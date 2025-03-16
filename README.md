@@ -1,8 +1,8 @@
 首次安装
 ```
-wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/mywarp.sh -O mywarp.sh
-chmod +x mywarp.sh
-./mywarp.sh
+wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/warp_optimize.sh -O warp_optimize.sh
+chmod +x warp_optimize.sh
+./warp_optimize.sh
 ```
 ```
 wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/clean_vps.sh -O clean_vps.sh
