@@ -8,7 +8,7 @@
           "team_token (optional)",
           "format (optional)"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=register&team_token=<Your-Team-Token>&format=<json|yaml|client|wireguard|warp-go|clash|xray|sing-box|qrencode>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=register&team_token=<Your-Team-Token>&format=<json|yaml|client|wireguard|warp-go|clash|xray|sing-box|qrencode>"
       },
       {
         "run": "device",
@@ -17,7 +17,7 @@
           "device_id",
           "token"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=device&device_id=<Your-Device-ID>&token=<Your-Token>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=device&device_id=<Your-Device-ID>&token=<Your-Token>"
       },
       {
         "run": "app",
@@ -25,7 +25,7 @@
         "params": [
           "token"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=app&token=<Your-Token>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=app&token=<Your-Token>"
       },
       {
         "run": "bind",
@@ -34,7 +34,7 @@
           "device_id",
           "token"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=bind&device_id=<Your-Device-ID>&token=<Your-Token>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=bind&device_id=<Your-Device-ID>&token=<Your-Token>"
       },
       {
         "run": "name",
@@ -44,7 +44,7 @@
           "token",
           "device_name"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=name&device_id=<Your-Device-ID>&token=<Your-Token>&device_name=<Your-Device-Name>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=name&device_id=<Your-Device-ID>&token=<Your-Token>&device_name=<Your-Device-Name>"
       },
       {
         "run": "license",
@@ -54,7 +54,7 @@
           "token",
           "license"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=license&device_id=<Your-Device-ID>&token=<Your-Token>&license=<Your-License>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=license&device_id=<Your-Device-ID>&token=<Your-Token>&license=<Your-License>"
       },
       {
         "run": "unbind",
@@ -63,7 +63,7 @@
           "device_id",
           "token"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=unbind&device_id=<Your-Device-ID>&token=<Your-Token>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=unbind&device_id=<Your-Device-ID>&token=<Your-Token>"
       },
       {
         "run": "cancel",
@@ -72,7 +72,7 @@
           "device_id",
           "token"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=cancel&device_id=<Your-Device-ID>&token=<Your-Token>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=cancel&device_id=<Your-Device-ID>&token=<Your-Token>"
       },
       {
         "run": "id",
@@ -80,7 +80,7 @@
         "params": [
           "convert"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=id&convert=<4-char-string|Numbers1,Numbers2,Numbers3>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=id&convert=<4-char-string|Numbers1,Numbers2,Numbers3>"
       },
       {
         "run": "token",
@@ -92,10 +92,10 @@
         ],
         "example": [
           {
-            "step1": "https://geforce.apnic-anycast.workers.dev/?run=token&organization=<Your-Organization>&email=<Your-Email>"
+            "step1": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=token&organization=<Your-Organization>&email=<Your-Email>"
           },
           {
-            "step2": "https://geforce.apnic-anycast.workers.dev/?run=token&organization=<Your-Organization>&A=<A-Value>&S=<S-Value>&N=<N-Value>&code=<Your-Code>"
+            "step2": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=token&organization=<Your-Organization>&A=<A-Value>&S=<S-Value>&N=<N-Value>&code=<Your-Code>"
           }
         ]
       },
@@ -105,7 +105,8 @@
         "params": [
           "format (optional)"
         ],
-        "example": "https://geforce.apnic-anycast.workers.dev/?run=key&format=<json|yaml>"
+        "example": "https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt/?run=key&format=<json|yaml>"
       }
     ]
   }
+  https://raw.githubusercontent.com/james986g/colo/refs/heads/main/geforce.txt
