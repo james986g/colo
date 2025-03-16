@@ -1,8 +1,8 @@
 首次安装
 ```
-wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/warp.sh -O warp.sh
-chmod +x warp.sh
-./warp.sh
+wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/mywarp.sh -O mywarp.sh
+chmod +x mywarp.sh
+./mywarp.sh
 ```
 手动安装cloudflared-linux-amd64
 ```
