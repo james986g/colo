@@ -62,7 +62,7 @@ if [ "$CHOICE" == "1" ]; then
 tunnel: $TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
 ingress:
-  - service: http://localhost:80
+  - service: http://localhost:1234
     hostname: $HOSTNAME
   - service: http_status:404
 EOF
@@ -78,7 +78,7 @@ Description=Cloudflare Tunnel
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/cloudflared --config /etc/cloudflared/config.yml tunnel run
+ExecStart=/usr/local/bin/cloudflared --config /etc/cloudflared/config.yml tunnel run --loglevel debug
 Restart=on-failure
 User=root
 
@@ -97,10 +97,11 @@ EOF
     echo -e "${GREEN}Cloudflare Tunnel 已成功启动！${NC}"
   else
     echo -e "${RED}Cloudflare Tunnel 启动失败，请检查以下内容：${NC}"
-    echo "1. 查看服务状态：systemctl status cloudflared"
-    echo "2. 手动运行检查错误：/usr/local/bin/cloudflared --config /etc/cloudflared/config.yml tunnel run"
-    echo "3. 确认 /etc/cloudflared/config.yml 和 credentials.json 中的配置无误"
-    echo "4. 检查网络连接：ping 162.159.192.1 或 curl -I https://cloudflare.com"
+    echo "1. 查看详细服务状态：systemctl status cloudflared"
+    echo "2. 查看日志：journalctl -u cloudflared.service"
+    echo "3. 手动运行检查错误：/usr/local/bin/cloudflared --config /etc/cloudflared/config.yml tunnel run --loglevel debug"
+    echo "4. 确认 /etc/cloudflared/config.yml 和 credentials.json 中的配置无误"
+    echo "5. 检查网络连接：ping 162.159.192.1 或 curl -I https://cloudflare.com"
     exit 1
   fi
 
