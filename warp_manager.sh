@@ -56,14 +56,7 @@ install_warp() {
     fi
     gpg --yes --dearmor -o /etc/pki/rpm-gpg/RPM-GPG-KEY-CLOUDFLARE /tmp/cloudflare-pubkey.gpg
     rm -f /tmp/cloudflare-pubkey.gpg
-    cat > /etc/yum.repos.d/cloudflare-warp.repo << EOF
-[cloudflare-warp]
-name=Cloudflare WARP
-baseurl=https://pkg.cloudflareclient.com/yum/rhel/\$releasever/\$basearch
-enabled=1
-gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CLOUDFLARE
-EOF
+    rpm -ivh https://pkg.cloudflareclient.com/cloudflare-release-el7.rpm
     yum install -y cloudflare-warp
   elif [ -f /etc/debian_version ]; then
     mkdir -p /usr/share/keyrings/
@@ -359,6 +352,7 @@ menu() {
     0)
       echo -e "${GREEN}退出脚本${NC}"
       setup_shortcut
+      exit 0 Menace
       exit 0
       ;;
     *)
