@@ -23,16 +23,40 @@ if [ "$CHOICE" == "1" ]; then
   # 安装功能
   echo -e "${GREEN}开始安装 Cloudflare Zero Trust...${NC}"
 
-  # 获取用户输入
-  echo -e "${GREEN}请输入你的 Cloudflare Zero Trust 隧道令牌 (Tunnel Token):${NC}"
-  read -p "Tunnel Token: " TUNNEL_TOKEN
-  echo -e "${GREEN}请输入你的 VPS 私有 IP 范围 (例如 192.168.1.0/24):${NC}"
-  read -p "私有 IP 范围: " PRIVATE_IP_RANGE
+  # 检查并修复 yum 源
+  echo -e "${GREEN}检查并修复 yum 源...${NC}"
+  if ! yum repolist &> /dev/null; then
+    echo -e "${GREEN}默认 yum 源不可用，正在切换到 vault.centos.org...${NC}"
+    mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.bak 2>/dev/null
+    cat << EOF > /etc/yum.repos.d/CentOS-Base.repo
+[base]
+name=CentOS-7 - Base
+baseurl=http://vault.centos.org/centos/7/os/x86_64/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+[updates]
+name=CentOS-7 - Updates
+baseurl=http://vault.centos.org/centos/7/updates/x86_64/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+[extras]
+name=CentOS-7 - Extras
+baseurl=http://vault.centos.org/centos/7/extras/x86_64/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+EOF
+    yum clean all
+    yum makecache
+  fi
 
   # 更新系统并安装必要工具
   echo -e "${GREEN}正在更新系统并安装依赖...${NC}"
   yum update -y
-  yum install -y wget curl
+  yum install -y wget curl || {
+    echo -e "${RED}依赖安装失败，但脚本将继续尝试安装 cloudflared...${NC}"
+  }
 
   # 下载并安装 cloudflared
   echo -e "${GREEN}正在安装 Cloudflare cloudflared...${NC}"
@@ -42,8 +66,15 @@ if [ "$CHOICE" == "1" ]; then
   # 验证安装
   if ! command -v cloudflared &> /dev/null; then
       echo -e "${RED}cloudflared 安装失败，请检查网络或手动安装！${NC}"
+      echo "手动安装命令：wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared"
       exit 1
   fi
+
+  # 获取用户输入
+  echo -e "${GREEN}请输入你的 Cloudflare Zero Trust 隧道令牌 (Tunnel Token):${NC}"
+  read -p "Tunnel Token: " TUNNEL_TOKEN
+  echo -e "${GREEN}请输入你的 VPS 私有 IP 范围 (例如 192.168.1.0/24):${NC}"
+  read -p "私有 IP 范围: " PRIVATE_IP_RANGE
 
   # 创建 cloudflared 配置文件目录
   mkdir -p /etc/cloudflared
