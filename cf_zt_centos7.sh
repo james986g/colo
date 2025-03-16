@@ -78,7 +78,7 @@ tunnel: $TUNNEL_ID
 credentials-file: /etc/cloudflared/credentials.json
 origincert: /etc/cloudflared/cert.pem
 ingress:
-  - service: http://localhost:1234
+  - service: http://localhost:80
     hostname: $HOSTNAME
   - service: http_status:404
 EOF
@@ -86,6 +86,12 @@ EOF
   # 保存隧道令牌
   echo "{\"TunnelID\":\"$TUNNEL_ID\",\"AccountTag\":\"$ACCOUNT_TAG\",\"TunnelSecret\":\"$TUNNEL_TOKEN\"}" > /etc/cloudflared/credentials.json
   chmod 600 /etc/cloudflared/credentials.json
+
+  # 检查配置文件是否存在
+  if [ ! -f /etc/cloudflared/config.yml ] || [ ! -f /etc/cloudflared/credentials.json ]; then
+    echo -e "${RED}配置文件生成失败，请检查脚本权限或磁盘空间！${NC}"
+    exit 1
+  fi
 
   # 显示配置文件内容供用户检查
   echo -e "${GREEN}以下是生成的配置文件内容，请确认无误：${NC}"
@@ -96,6 +102,17 @@ EOF
   echo -e "${GREEN}如果以上内容有误，请按 Ctrl+C 退出并重新运行脚本！${NC}"
   read -p "按 Enter 继续..."
 
+  # 测试隧道连接
+  echo -e "${GREEN}测试隧道连接...${NC}"
+  /usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run --loglevel debug --logfile /tmp/cloudflared_test.log &
+  TEST_PID=$!
+  sleep 5  # 等待几秒观察输出
+  kill $TEST_PID
+  cat /tmp/cloudflared_test.log
+  echo -e "${GREEN}请检查以上输出是否有错误（如 Invalid token 或 Connection refused），如果有问题请修正配置后重试！${NC}"
+  read -p "按 Enter 继续..."
+  rm -f /tmp/cloudflared_test.log
+
   # 创建 systemd 服务文件
   cat << EOF > /etc/systemd/system/cloudflared.service
 [Unit]
@@ -103,14 +120,21 @@ Description=Cloudflare Tunnel
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run --loglevel debug
+ExecStart=/usr/local/bin/cloudflared tunnel run --config /etc/cloudflared/config.yml --loglevel debug --logfile /var/log/cloudflared.log
 Restart=always
 RestartSec=5
 User=root
+StandardOutput=file:/var/log/cloudflared.log
+StandardError=file:/var/log/cloudflared.log
 
 [Install]
 WantedBy=multi-user.target
 EOF
+
+  # 创建日志目录
+  mkdir -p /var/log
+  touch /var/log/cloudflared.log
+  chmod 644 /var/log/cloudflared.log
 
   # 重新加载 systemd 并启动服务
   echo -e "${GREEN}正在启动 Cloudflare Tunnel...${NC}"
@@ -121,13 +145,15 @@ EOF
   # 检查服务状态
   if systemctl is-active cloudflared &> /dev/null; then
     echo -e "${GREEN}Cloudflare Tunnel 已成功启动！${NC}"
+    echo "验证隧道状态：/usr/local/bin/cloudflared tunnel info $TUNNEL_ID"
+    echo "查看日志：cat /var/log/cloudflared.log"
   else
     echo -e "${RED}Cloudflare Tunnel 启动失败，请检查以下内容：${NC}"
     echo "1. 查看详细服务状态：systemctl status cloudflared"
-    echo "2. 查看日志：journalctl -u cloudflared.service"
+    echo "2. 查看日志：cat /var/log/cloudflared.log"
     echo "3. 手动运行检查错误：/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run --loglevel debug"
     echo "4. 确认 /etc/cloudflared/config.yml 和 credentials.json 中的配置无误"
-    echo "5. 检查 /etc/cloudflared/cert.pem 是否存在且有效"
+    echo "5. 确认 /etc/cloudflared/cert.pem 是否存在且有效"
     echo "6. 检查网络连接：ping 162.159.192.1 或 curl -I https://cloudflare.com"
     exit 1
   fi
