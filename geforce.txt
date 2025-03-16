@@ -1,0 +1,111 @@
+{
+    "message": "Warp Api Usage Guide",
+    "usage": [
+      {
+        "run": "register",
+        "description": "Register a new device",
+        "params": [
+          "team_token (optional)",
+          "format (optional)"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=register&team_token=<Your-Team-Token>&format=<json|yaml|client|wireguard|warp-go|clash|xray|sing-box|qrencode>"
+      },
+      {
+        "run": "device",
+        "description": "Get details for a specific device",
+        "params": [
+          "device_id",
+          "token"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=device&device_id=<Your-Device-ID>&token=<Your-Token>"
+      },
+      {
+        "run": "app",
+        "description": "Get client configuration",
+        "params": [
+          "token"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=app&token=<Your-Token>"
+      },
+      {
+        "run": "bind",
+        "description": "Bind a device to an account",
+        "params": [
+          "device_id",
+          "token"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=bind&device_id=<Your-Device-ID>&token=<Your-Token>"
+      },
+      {
+        "run": "name",
+        "description": "Set the name of a device",
+        "params": [
+          "device_id",
+          "token",
+          "device_name"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=name&device_id=<Your-Device-ID>&token=<Your-Token>&device_name=<Your-Device-Name>"
+      },
+      {
+        "run": "license",
+        "description": "Set the license for a device",
+        "params": [
+          "device_id",
+          "token",
+          "license"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=license&device_id=<Your-Device-ID>&token=<Your-Token>&license=<Your-License>"
+      },
+      {
+        "run": "unbind",
+        "description": "Unbind a device from an account",
+        "params": [
+          "device_id",
+          "token"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=unbind&device_id=<Your-Device-ID>&token=<Your-Token>"
+      },
+      {
+        "run": "cancel",
+        "description": "Cancel a device registration",
+        "params": [
+          "device_id",
+          "token"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=cancel&device_id=<Your-Device-ID>&token=<Your-Token>"
+      },
+      {
+        "run": "id",
+        "description": "Convert and display client_id and reserved",
+        "params": [
+          "convert"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=id&convert=<4-char-string|Numbers1,Numbers2,Numbers3>"
+      },
+      {
+        "run": "token",
+        "description": "Get Cloudflare WARP Zero Trust Token",
+        "params": [
+          "organization",
+          "email",
+          "code"
+        ],
+        "example": [
+          {
+            "step1": "https://geforce.apnic-anycast.workers.dev/?run=token&organization=<Your-Organization>&email=<Your-Email>"
+          },
+          {
+            "step2": "https://geforce.apnic-anycast.workers.dev/?run=token&organization=<Your-Organization>&A=<A-Value>&S=<S-Value>&N=<N-Value>&code=<Your-Code>"
+          }
+        ]
+      },
+      {
+        "run": "key",
+        "description": "Generate a pair of WireGuard public and private keys",
+        "params": [
+          "format (optional)"
+        ],
+        "example": "https://geforce.apnic-anycast.workers.dev/?run=key&format=<json|yaml>"
+      }
+    ]
+  }
