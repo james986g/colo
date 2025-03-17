@@ -201,14 +201,16 @@ EOF
     echo -e "${GREEN}添加 DNS 记录...${NC}"
     if ! /usr/local/bin/cloudflared tunnel route dns $TUNNEL_NAME $TUNNEL_DOMAIN; then
         echo -e "${RED}警告：添加 DNS 记录失败，请检查域名 $TUNNEL_DOMAIN 是否正确或是否有权限${NC}"
+        echo "你可以稍后手动在 Cloudflare 仪表板中添加 CNAME 记录指向 $TUNNEL_ID.cfargotunnel.com"
     else
         echo -e "${GREEN}DNS 记录添加成功${NC}"
     fi
 
-    if systemctl is-active cloudflared &> /dev/null || pgrep cloudflared &> /dev/null; then
+    if systemctl is-active cloudflared &> /dev/null || pgrep -f "cloudflared.*tunnel.*run" &> /dev/null; then
         echo -e "${GREEN}检测到运行中的 Tunnel，重新启动...${NC}"
-        pkill -f cloudflared 2>/dev/null
+        pkill -f "cloudflared.*tunnel.*run" 2>/dev/null
         systemctl stop cloudflared 2>/dev/null
+        sleep 2
     fi
 
     echo -e "${GREEN}启动 Tunnel...${NC}"
@@ -261,7 +263,7 @@ uninstall_cloudflared() {
         echo "已停止并删除 cloudflared 系统服务"
     fi
 
-    if pkill -f cloudflared 2>/dev/null; then
+    if pkill -f "cloudflared.*tunnel.*run" 2>/dev/null; then
         echo "已终止所有 cloudflared 进程"
     fi
 
