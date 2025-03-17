@@ -134,35 +134,63 @@ configure_tunnel() {
             echo "现有 Tunnel 列表："
             /usr/local/bin/cloudflared tunnel list
             read -p "请输入要使用的 Tunnel 名称： " TUNNEL_NAME
+            # 查找现有隧道的凭证文件
+            CREDENTIALS_FILE=$(ls -t /root/.cloudflared/*.json | head -n 1)
+            if [ -z "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
+                echo -e "${RED}错误：无法找到现有隧道的有效凭证文件${NC}"
+                exit 1
+            fi
+            TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
         else
             TUNNEL_NAME="my-tunnel-$(date +%s)"
             echo -e "${GREEN}创建新 Tunnel：$TUNNEL_NAME${NC}"
-            /usr/local/bin/cloudflared tunnel create $TUNNEL_NAME
+            OUTPUT=$(/usr/local/bin/cloudflared tunnel create $TUNNEL_NAME 2>&1)
+            echo "$OUTPUT"
+            # 从输出中提取凭证文件路径
+            CREDENTIALS_FILE=$(echo "$OUTPUT" | grep -oP '(?<=Tunnel credentials written to ).*\.json')
+            if [ -z "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
+                echo -e "${RED}错误：隧道凭证文件未生成或为空${NC}"
+                echo "尝试重新创建隧道..."
+                /usr/local/bin/cloudflared tunnel delete $TUNNEL_NAME 2>/dev/null
+                OUTPUT=$(/usr/local/bin/cloudflared tunnel create $TUNNEL_NAME 2>&1)
+                echo "$OUTPUT"
+                CREDENTIALS_FILE=$(echo "$OUTPUT" | grep -oP '(?<=Tunnel credentials written to ).*\.json')
+                if [ -z "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
+                    echo -e "${RED}仍然无法生成有效凭证文件，请检查 cloudflared 权限、登录状态或磁盘空间${NC}"
+                    df -h
+                    ls -ld /root/.cloudflared
+                    exit 1
+                fi
+            fi
+            TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
         fi
     else
         TUNNEL_NAME="my-tunnel-$(date +%s)"
         echo -e "${GREEN}创建新 Tunnel：$TUNNEL_NAME${NC}"
-        /usr/local/bin/cloudflared tunnel create $TUNNEL_NAME
-    fi
-
-    # 检查凭证文件是否生成且非空
-    CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_NAME}.json"
-    if [ ! -f "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
-        echo -e "${RED}错误：隧道凭证文件 $CREDENTIALS_FILE 未生成或为空${NC}"
-        echo "尝试重新创建隧道..."
-        /usr/local/bin/cloudflared tunnel delete $TUNNEL_NAME 2>/dev/null
-        /usr/local/bin/cloudflared tunnel create $TUNNEL_NAME
-        if [ ! -f "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
-            echo -e "${RED}仍然无法生成有效凭证文件，请检查 cloudflared 权限、登录状态或磁盘空间${NC}"
-            df -h
-            ls -ld /root/.cloudflared
-            exit 1
+        OUTPUT=$(/usr/local/bin/cloudflared tunnel create $TUNNEL_NAME 2>&1)
+        echo "$OUTPUT"
+        # 从输出中提取凭证文件路径
+        CREDENTIALS_FILE=$(echo "$OUTPUT" | grep -oP '(?<=Tunnel credentials written to ).*\.json')
+        if [ -z "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
+            echo -e "${RED}错误：隧道凭证文件未生成或为空${NC}"
+            echo "尝试重新创建隧道..."
+            /usr/local/bin/cloudflared tunnel delete $TUNNEL_NAME 2>/dev/null
+            OUTPUT=$(/usr/local/bin/cloudflared tunnel create $TUNNEL_NAME 2>&1)
+            echo "$OUTPUT"
+            CREDENTIALS_FILE=$(echo "$OUTPUT" | grep -oP '(?<=Tunnel credentials written to ).*\.json')
+            if [ -z "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
+                echo -e "${RED}仍然无法生成有效凭证文件，请检查 cloudflared 权限、登录状态或磁盘空间${NC}"
+                df -h
+                ls -ld /root/.cloudflared
+                exit 1
+            fi
         fi
+        TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
     fi
 
     CONFIG_FILE="/root/.cloudflared/config.yml"
     cat > $CONFIG_FILE <<EOF
-tunnel: $TUNNEL_NAME
+tunnel: $TUNNEL_ID
 credentials-file: $CREDENTIALS_FILE
 ingress:
   - hostname: $TUNNEL_DOMAIN
@@ -184,7 +212,7 @@ EOF
 
     echo -e "${GREEN}启动 Tunnel...${NC}"
     free -m | grep "Mem:" | awk '{if ($4 < 100) {print "\033[31m警告：可用内存不足 " $4 "MB，可能导致启动失败\033[0m"}}'
-    /usr/local/bin/cloudflared tunnel --config $CONFIG_FILE run $TUNNEL_NAME --logfile /var/log/cloudflared.log &
+    /usr/local/bin/cloudflared tunnel --config $CONFIG_FILE run $TUNNEL_ID --logfile /var/log/cloudflared.log &
     TUNNEL_PID=$!
     sleep 5
     if ps -p $TUNNEL_PID > /dev/null; then
@@ -201,8 +229,7 @@ EOF
         echo -e "${GREEN}安装 cloudflared 为系统服务...${NC}"
         /usr/local/bin/cloudflared service install
         if [ $? -eq 0 ] && [ -f /etc/systemd/system/cloudflared.service ]; then
-            # 更新服务文件以匹配配置文件和隧道名称
-            sed -i "s|--config .* tunnel run|--config $CONFIG_FILE tunnel run $TUNNEL_NAME|" /etc/systemd/system/cloudflared.service
+            sed -i "s|--config .* tunnel run|--config $CONFIG_FILE tunnel run $TUNNEL_ID|" /etc/systemd/system/cloudflared.service
             systemctl daemon-reload
             systemctl enable cloudflared
             systemctl start cloudflared
