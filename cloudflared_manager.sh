@@ -33,19 +33,16 @@ check_existing_cloudflared() {
     echo -e "${GREEN}检测系统中现有的 cloudflared 资源...${NC}"
     CLOUDFLARED_EXISTS=0
 
-    # 检查二进制文件
     if command -v cloudflared &> /dev/null; then
         echo "找到 cloudflared 二进制文件：$(which cloudflared)，版本：$(cloudflared --version)"
         CLOUDFLARED_EXISTS=1
     fi
 
-    # 检查配置文件目录
     if [ -d /root/.cloudflared ]; then
         echo "找到 cloudflared 配置文件目录：/root/.cloudflared"
         CLOUDFLARED_EXISTS=1
     fi
 
-    # 检查服务
     if systemctl is-active cloudflared &> /dev/null; then
         echo "找到运行中的 cloudflared 服务"
         CLOUDFLARED_EXISTS=1
@@ -64,6 +61,9 @@ install_cloudflared() {
         echo -e "${GREEN}系统中已存在 cloudflared，继续配置...${NC}"
         return 0
     fi
+
+    # 确保 /usr/local/bin 在 PATH 中
+    export PATH=$PATH:/usr/local/bin
 
     case $OS in
         "centos")
@@ -94,17 +94,23 @@ install_cloudflared() {
     esac
 
     # 验证安装
-    if ! command -v cloudflared &> /dev/null; then
+    if [ ! -f /usr/local/bin/cloudflared ] || [ ! -x /usr/local/bin/cloudflared ]; then
         echo -e "${RED}Cloudflared 安装失败${NC}"
+        echo "诊断信息："
+        [ -f /usr/local/bin/cloudflared ] && echo "文件存在，但可能不可执行" || echo "文件不存在"
+        file /usr/local/bin/cloudflared 2>/dev/null || echo "无法检查文件类型"
+        exit 1
+    elif ! /usr/local/bin/cloudflared --version &> /dev/null; then
+        echo -e "${RED}Cloudflared 可执行文件无效${NC}"
+        file /usr/local/bin/cloudflared
         exit 1
     else
-        echo -e "${GREEN}Cloudflared 安装成功，版本：$(cloudflared --version)${NC}"
+        echo -e "${GREEN}Cloudflared 安装成功，版本：$(/usr/local/bin/cloudflared --version)${NC}"
     fi
 }
 
 # 配置 Cloudflare Tunnel 的函数
 configure_tunnel() {
-    # 检查是否已登录
     if [ ! -f /root/.cloudflared/cert.pem ]; then
         echo -e "${GREEN}正在登录 Cloudflare...${NC}"
         cloudflared login
@@ -116,11 +122,9 @@ configure_tunnel() {
         echo -e "${GREEN}已检测到登录凭证，跳过登录步骤${NC}"
     fi
 
-    # 获取用户输入
     read -p "请输入要使用的域名（例如 tunnel.example.com）： " TUNNEL_DOMAIN
     read -p "请输入 VPS 本地服务的地址和端口（例如 http://localhost:80）： " LOCAL_SERVICE
 
-    # 检查是否已有 Tunnel
     if [ -n "$(cloudflared tunnel list | grep -v 'No tunnels')" ]; then
         echo -e "${GREEN}检测到现有 Tunnel，请选择：${NC}"
         echo "1) 使用现有 Tunnel"
@@ -141,7 +145,6 @@ configure_tunnel() {
         cloudflared tunnel create $TUNNEL_NAME
     fi
 
-    # 生成配置文件
     CONFIG_FILE="/root/.cloudflared/config.yml"
     cat > $CONFIG_FILE <<EOF
 tunnel: $TUNNEL_NAME
@@ -155,22 +158,18 @@ EOF
     echo -e "${GREEN}配置文件已生成：$CONFIG_FILE${NC}"
     cat $CONFIG_FILE
 
-    # 添加 DNS 记录
     echo -e "${GREEN}添加 DNS 记录...${NC}"
     cloudflared tunnel route dns $TUNNEL_NAME $TUNNEL_DOMAIN
 
-    # 检查是否已有运行的 Tunnel
     if systemctl is-active cloudflared &> /dev/null || pgrep cloudflared &> /dev/null; then
         echo -e "${GREEN}检测到运行中的 Tunnel，重新启动...${NC}"
         pkill -9 cloudflared 2>/dev/null
         systemctl stop cloudflared 2>/dev/null
     fi
 
-    # 启动 Tunnel
     echo -e "${GREEN}启动 Tunnel...${NC}"
     cloudflared tunnel --config $CONFIG_FILE run $TUNNEL_NAME &
 
-    # 安装为系统服务（可选）
     read -p "是否将 Tunnel 安装为系统服务？(y/n): " INSTALL_SERVICE
     if [ "$INSTALL_SERVICE" = "y" ] || [ "$INSTALL_SERVICE" = "Y" ]; then
         cloudflared service install --config $CONFIG_FILE
@@ -184,7 +183,6 @@ EOF
 uninstall_cloudflared() {
     echo -e "${GREEN}开始卸载 Cloudflare Tunnel...${NC}"
 
-    # 停止并删除系统服务（如果存在）
     if systemctl is-active cloudflared &> /dev/null; then
         systemctl stop cloudflared
         systemctl disable cloudflared
@@ -193,12 +191,10 @@ uninstall_cloudflared() {
         echo "已停止并删除 cloudflared 系统服务"
     fi
 
-    # 杀死运行中的 cloudflared 进程
     if pkill -9 cloudflared 2>/dev/null; then
         echo "已终止所有 cloudflared 进程"
     fi
 
-    # 删除 cloudflared 二进制文件
     if [ -f /usr/local/bin/cloudflared ]; then
         rm -f /usr/local/bin/cloudflared
         echo "已删除 /usr/local/bin/cloudflared"
@@ -207,13 +203,11 @@ uninstall_cloudflared() {
         echo "已删除 cloudflared 二进制文件"
     fi
 
-    # 删除配置文件和相关文件
     if [ -d /root/.cloudflared ]; then
         rm -rf /root/.cloudflared
         echo "已删除 /root/.cloudflared 目录及其所有文件"
     fi
 
-    # 删除可能的临时文件
     rm -f /tmp/cloudflared.deb /tmp/cloudflared.rpm 2>/dev/null
 
     echo -e "${GREEN}Cloudflare Tunnel 已完全卸载${NC}"
@@ -230,7 +224,6 @@ read -p "输入选项 (1 或 2): " CHOICE
 case $CHOICE in
     1)
         echo -e "${GREEN}开始安装 Cloudflare Tunnel...${NC}"
-        # 更新系统包（可选）
         case $OS in
             "centos") yum update -y ;;
             "ubuntu"|"debian") apt-get update -y ;;
