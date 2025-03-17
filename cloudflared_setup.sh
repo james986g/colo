@@ -134,7 +134,6 @@ configure_tunnel() {
             echo "现有 Tunnel 列表："
             /usr/local/bin/cloudflared tunnel list
             read -p "请输入要使用的 Tunnel 名称： " TUNNEL_NAME
-            # 查找现有隧道的凭证文件
             CREDENTIALS_FILE=$(ls -t /root/.cloudflared/*.json | head -n 1)
             if [ -z "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
                 echo -e "${RED}错误：无法找到现有隧道的有效凭证文件${NC}"
@@ -146,7 +145,6 @@ configure_tunnel() {
             echo -e "${GREEN}创建新 Tunnel：$TUNNEL_NAME${NC}"
             OUTPUT=$(/usr/local/bin/cloudflared tunnel create $TUNNEL_NAME 2>&1)
             echo "$OUTPUT"
-            # 从输出中提取凭证文件路径
             CREDENTIALS_FILE=$(echo "$OUTPUT" | grep -oP '(?<=Tunnel credentials written to ).*\.json')
             if [ -z "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
                 echo -e "${RED}错误：隧道凭证文件未生成或为空${NC}"
@@ -169,7 +167,6 @@ configure_tunnel() {
         echo -e "${GREEN}创建新 Tunnel：$TUNNEL_NAME${NC}"
         OUTPUT=$(/usr/local/bin/cloudflared tunnel create $TUNNEL_NAME 2>&1)
         echo "$OUTPUT"
-        # 从输出中提取凭证文件路径
         CREDENTIALS_FILE=$(echo "$OUTPUT" | grep -oP '(?<=Tunnel credentials written to ).*\.json')
         if [ -z "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
             echo -e "${RED}错误：隧道凭证文件未生成或为空${NC}"
@@ -202,7 +199,11 @@ EOF
     cat $CONFIG_FILE
 
     echo -e "${GREEN}添加 DNS 记录...${NC}"
-    /usr/local/bin/cloudflared tunnel route dns $TUNNEL_NAME $TUNNEL_DOMAIN
+    if ! /usr/local/bin/cloudflared tunnel route dns $TUNNEL_NAME $TUNNEL_DOMAIN; then
+        echo -e "${RED}警告：添加 DNS 记录失败，请检查域名 $TUNNEL_DOMAIN 是否正确或是否有权限${NC}"
+    else
+        echo -e "${GREEN}DNS 记录添加成功${NC}"
+    fi
 
     if systemctl is-active cloudflared &> /dev/null || pgrep cloudflared &> /dev/null; then
         echo -e "${GREEN}检测到运行中的 Tunnel，重新启动...${NC}"
