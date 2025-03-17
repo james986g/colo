@@ -230,10 +230,18 @@ EOF
     read -p "是否将 Tunnel 安装为系统服务？(y/n): " INSTALL_SERVICE
     if [ "$INSTALL_SERVICE" = "y" ] || [ "$INSTALL_SERVICE" = "Y" ]; then
         echo -e "${GREEN}安装 cloudflared 为系统服务...${NC}"
-        # 检查并清理冲突的配置文件
-        if [ -f /etc/cloudflared/config.yml ]; then
-            echo -e "${RED}检测到冲突的配置文件 /etc/cloudflared/config.yml，正在删除...${NC}"
-            rm -f /etc/cloudflared/config.yml
+        # 检查并清理现有服务和冲突的配置文件
+        if systemctl is-active cloudflared &> /dev/null || [ -f /etc/systemd/system/cloudflared.service ]; then
+            echo -e "${RED}检测到现有 cloudflared 服务，正在卸载...${NC}"
+            systemctl stop cloudflared 2>/dev/null
+            systemctl disable cloudflared 2>/dev/null
+            /usr/local/bin/cloudflared service uninstall 2>/dev/null
+            rm -f /etc/systemd/system/cloudflared.service
+            systemctl daemon-reload
+        fi
+        if [ -d /etc/cloudflared ] || [ -f /etc/cloudflared/config.yml ]; then
+            echo -e "${RED}检测到冲突的配置文件目录 /etc/cloudflared，正在删除...${NC}"
+            rm -rf /etc/cloudflared
         fi
         # 安装服务并指定配置文件
         /usr/local/bin/cloudflared --config $CONFIG_FILE service install
