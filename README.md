@@ -12,7 +12,7 @@ chmod +x clean_vps.sh
 ```
 wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/cloudflared_manager.sh -O cloudflared_manager.sh
 chmod +x cloudflared_manager.sh
-./install_cloudflare_tunnel.sh
+./cloudflared_manager.sh
 ```
 手动安装cloudflared-linux-amd64
 ```
