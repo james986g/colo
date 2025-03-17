@@ -3,7 +3,7 @@
 # 默认工作目录和临时目录
 WORK_DIR='/etc/argox'
 TEMP_DIR='/tmp/argox'
-METRICS_PORT='3333'
+METRICS_PORT='80'
 
 # 创建必要的目录
 mkdir -p $WORK_DIR $TEMP_DIR
