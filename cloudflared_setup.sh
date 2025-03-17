@@ -230,8 +230,15 @@ EOF
     read -p "是否将 Tunnel 安装为系统服务？(y/n): " INSTALL_SERVICE
     if [ "$INSTALL_SERVICE" = "y" ] || [ "$INSTALL_SERVICE" = "Y" ]; then
         echo -e "${GREEN}安装 cloudflared 为系统服务...${NC}"
-        /usr/local/bin/cloudflared service install
+        # 检查并清理冲突的配置文件
+        if [ -f /etc/cloudflared/config.yml ]; then
+            echo -e "${RED}检测到冲突的配置文件 /etc/cloudflared/config.yml，正在删除...${NC}"
+            rm -f /etc/cloudflared/config.yml
+        fi
+        # 安装服务并指定配置文件
+        /usr/local/bin/cloudflared --config $CONFIG_FILE service install
         if [ $? -eq 0 ] && [ -f /etc/systemd/system/cloudflared.service ]; then
+            # 确保服务文件使用正确的配置和隧道 ID
             sed -i "s|--config .* tunnel run|--config $CONFIG_FILE tunnel run $TUNNEL_ID|" /etc/systemd/system/cloudflared.service
             systemctl daemon-reload
             systemctl enable cloudflared
@@ -245,7 +252,7 @@ EOF
             fi
         else
             echo -e "${RED}cloudflared 服务安装失败，可能是权限问题或版本不兼容${NC}"
-            echo "请手动检查：/usr/local/bin/cloudflared service install"
+            echo "请手动检查：/usr/local/bin/cloudflared --config $CONFIG_FILE service install"
             exit 1
         fi
     fi
@@ -278,6 +285,11 @@ uninstall_cloudflared() {
     if [ -d /root/.cloudflared ]; then
         rm -rf /root/.cloudflared
         echo "已删除 /root/.cloudflared 目录及其所有文件"
+    fi
+
+    if [ -d /etc/cloudflared ]; then
+        rm -rf /etc/cloudflared
+        echo "已删除 /etc/cloudflared 目录及其所有文件"
     fi
 
     rm -f /tmp/cloudflared.deb /tmp/cloudflared.rpm 2>/dev/null
