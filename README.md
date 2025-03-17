@@ -9,6 +9,11 @@ wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/clean_vps.
 chmod +x clean_vps.sh
 ./clean_vps.sh
 ```
+```
+wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/argo_temp.sh -O argo_temp.sh
+chmod +x argo_temp.sh
+./argo_temp.sh
+```
 argo tunnel
 ```
 wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/cloudflared_setup.sh -O cloudflared_setup.sh
