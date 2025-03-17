@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 脚本功能：在 CentOS 7、Ubuntu 和 Debian 上安装、配置或卸载 Cloudflare Tunnel (cloudflared)
-# 新增功能：临时 Argo Tunnel、更换隧道、快捷键支持
+# 新增功能：临时 Argo Tunnel、更换隧道、快捷键支持（优化临时隧道实现）
 
 # 检查是否以 root 或 sudo 权限运行
 if [ "$EUID" -ne 0 ]; then
@@ -187,23 +187,34 @@ EOF
     fi
 }
 
-# 新功能：生成临时 Argo Tunnel
+# 优化后的临时 Argo Tunnel 函数（使用之前可靠的实现）
 temporary_argo() {
     install_cloudflared
-    read -p "请输入本地服务的地址和端口（例如 http://localhost:80）： " LOCAL_SERVICE
+    read -p "请输入本地服务的地址和端口（例如 http://localhost:8080）： " LOCAL_SERVICE
+    LOCAL_PORT=$(echo $LOCAL_SERVICE | grep -oP '(?<=:)\d+')
+    if ! netstat -tuln | grep -q ":${LOCAL_PORT} "; then
+        echo -e "${RED}警告：本地服务 $LOCAL_SERVICE 未运行${NC}"
+        read -p "是否继续？(y/n): " CONTINUE
+        [ "$CONTINUE" != "y" ] && [ "$CONTINUE" != "Y" ] && exit 1
+    fi
+
     echo -e "${GREEN}生成临时 Argo Tunnel...${NC}"
     ARGO_DOMAIN=$(timeout 60s /usr/local/bin/cloudflared tunnel --url "$LOCAL_SERVICE" --logfile /var/log/argo_temp.log --loglevel error 2>/dev/null | grep -oE "https://[-0-9a-z]*\.trycloudflare.com" | head -n1)
     if [ -n "$ARGO_DOMAIN" ]; then
         echo -e "${GREEN}临时 Argo Tunnel 域名: $ARGO_DOMAIN${NC}"
         echo "临时隧道已在前台运行，按 Ctrl+C 停止"
+        echo "日志记录在 /var/log/argo_temp.log"
         /usr/local/bin/cloudflared tunnel --url "$LOCAL_SERVICE" --logfile /var/log/argo_temp.log
     else
         echo -e "${RED}生成临时 Argo Tunnel 失败${NC}"
+        echo "可能原因：1) 网络问题 2) 本地服务未正确监听 3) Cloudflare 服务不可用"
+        echo "检查日志："
+        cat /var/log/argo_temp.log 2>/dev/null || echo "无日志输出"
         exit 1
     fi
 }
 
-# 新功能：更换 Argo 隧道
+# 更换 Argo 隧道
 replace_argo_tunnel() {
     echo -e "${GREEN}更换 Argo 隧道...${NC}"
     systemctl stop cloudflared 2>/dev/null
@@ -234,7 +245,7 @@ uninstall_cloudflared() {
     echo -e "${GREEN}Cloudflare Tunnel 已完全卸载${NC}"
 }
 
-# 主菜单（添加新功能和快捷键支持）
+# 主菜单
 show_menu() {
     echo -e "${GREEN}Cloudflare Tunnel 一键脚本${NC}"
     echo "支持的系统：CentOS, Ubuntu, Debian"
