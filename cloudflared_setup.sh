@@ -159,14 +159,34 @@ EOF
 
     echo -e "${GREEN}启动 Tunnel...${NC}"
     free -m | grep "Mem:" | awk '{if ($4 < 100) {print "\033[31m警告：可用内存不足 " $4 "MB，可能导致启动失败\033[0m"}}'
-    /usr/local/bin/cloudflared tunnel --config $CONFIG_FILEaucoup run $TUNNEL_NAME &
+    /usr/local/bin/cloudflared tunnel --config $CONFIG_FILE run $TUNNEL_NAME &
+    TUNNEL_PID=$!
+    sleep 5
+    if ps -p $TUNNEL_PID > /dev/null; then
+        echo -e "${GREEN}Tunnel 已成功启动 (PID: $TUNNEL_PID)${NC}"
+    else
+        echo -e "${RED}Tunnel 启动失败，请检查配置或日志${NC}"
+        exit 1
+    fi
 
     read -p "是否将 Tunnel 安装为系统服务？(y/n): " INSTALL_SERVICE
     if [ "$INSTALL_SERVICE" = "y" ] || [ "$INSTALL_SERVICE" = "Y" ]; then
-        /usr/local/bin/cloudflared service install --config $CONFIG_FILE
-        systemctl enable cloudflared
-        systemctl start cloudflared
-        echo -e "${GREEN}Tunnel 已安装为系统服务并启动${NC}"
+        echo -e "${GREEN}安装 cloudflared 为系统服务...${NC}"
+        /usr/local/bin/cloudflared service install
+        if [ $? -eq 0 ]; then
+            systemctl enable cloudflared
+            systemctl start cloudflared
+            if systemctl is-active cloudflared &> /dev/null; then
+                echo -e "${GREEN}cloudflared 服务已成功启动${NC}"
+            else
+                echo -e "${RED}cloudflared 服务启动失败，请检查日志${NC}"
+                systemctl status cloudflared
+                exit 1
+            fi
+        else
+            echo -e "${RED}cloudflared 服务安装失败${NC}"
+            exit 1
+        fi
     fi
 }
 
