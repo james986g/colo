@@ -115,6 +115,16 @@ configure_tunnel() {
     read -p "请输入要使用的域名（例如 tunnel.example.com）： " TUNNEL_DOMAIN
     read -p "请输入 VPS 本地服务的地址和端口（例如 http://localhost:80）： " LOCAL_SERVICE
 
+    # 检查本地服务是否运行
+    LOCAL_PORT=$(echo $LOCAL_SERVICE | grep -oP '(?<=:)\d+')
+    if ! netstat -tuln | grep -q ":${LOCAL_PORT} "; then
+        echo -e "${RED}警告：本地服务 $LOCAL_SERVICE 未运行，隧道可能无法工作${NC}"
+        read -p "是否继续？(y/n): " CONTINUE
+        if [ "$CONTINUE" != "y" ] && [ "$CONTINUE" != "Y" ]; then
+            exit 1
+        fi
+    fi
+
     if [ -n "$(/usr/local/bin/cloudflared tunnel list | grep -v 'No tunnels')" ]; then
         echo -e "${GREEN}检测到现有 Tunnel，请选择：${NC}"
         echo "1) 使用现有 Tunnel"
@@ -159,13 +169,15 @@ EOF
 
     echo -e "${GREEN}启动 Tunnel...${NC}"
     free -m | grep "Mem:" | awk '{if ($4 < 100) {print "\033[31m警告：可用内存不足 " $4 "MB，可能导致启动失败\033[0m"}}'
-    /usr/local/bin/cloudflared tunnel --config $CONFIG_FILE run $TUNNEL_NAME &
+    /usr/local/bin/cloudflared tunnel --config $CONFIG_FILE run $TUNNEL_NAME --logfile /var/log/cloudflared.log &
     TUNNEL_PID=$!
     sleep 5
     if ps -p $TUNNEL_PID > /dev/null; then
         echo -e "${GREEN}Tunnel 已成功启动 (PID: $TUNNEL_PID)${NC}"
+        echo "隧道日志已记录到 /var/log/cloudflared.log"
     else
         echo -e "${RED}Tunnel 启动失败，请检查配置或日志${NC}"
+        cat /var/log/cloudflared.log
         exit 1
     fi
 
@@ -173,7 +185,8 @@ EOF
     if [ "$INSTALL_SERVICE" = "y" ] || [ "$INSTALL_SERVICE" = "Y" ]; then
         echo -e "${GREEN}安装 cloudflared 为系统服务...${NC}"
         /usr/local/bin/cloudflared service install
-        if [ $? -eq 0 ]; then
+        if [ $? -eq 0 ] && [ -f /etc/systemd/system/cloudflared.service ]; then
+            systemctl daemon-reload
             systemctl enable cloudflared
             systemctl start cloudflared
             if systemctl is-active cloudflared &> /dev/null; then
@@ -184,7 +197,8 @@ EOF
                 exit 1
             fi
         else
-            echo -e "${RED}cloudflared 服务安装失败${NC}"
+            echo -e "${RED}cloudflared 服务安装失败，可能是权限问题或版本不兼容${NC}"
+            echo "请手动检查：/usr/local/bin/cloudflared service install"
             exit 1
         fi
     fi
