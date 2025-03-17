@@ -215,7 +215,7 @@ EOF
 
     echo -e "${GREEN}启动 Tunnel...${NC}"
     free -m | grep "Mem:" | awk '{if ($4 < 100) {print "\033[31m警告：可用内存不足 " $4 "MB，可能导致启动失败\033[0m"}}'
-    /usr/local/bin/cloudflared tunnel --config $CONFIG_FILE run $TUNNEL_ID --logfile /var/log/cloudflared.log &
+    /usr/local/bin/cloudflared --config $CONFIG_FILE --logfile /var/log/cloudflared.log tunnel run $TUNNEL_ID &
     TUNNEL_PID=$!
     sleep 5
     if ps -p $TUNNEL_PID > /dev/null; then
