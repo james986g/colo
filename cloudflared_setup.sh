@@ -145,10 +145,25 @@ configure_tunnel() {
         /usr/local/bin/cloudflared tunnel create $TUNNEL_NAME
     fi
 
+    # 检查凭证文件是否生成且非空
+    CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_NAME}.json"
+    if [ ! -f "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
+        echo -e "${RED}错误：隧道凭证文件 $CREDENTIALS_FILE 未生成或为空${NC}"
+        echo "尝试重新创建隧道..."
+        /usr/local/bin/cloudflared tunnel delete $TUNNEL_NAME 2>/dev/null
+        /usr/local/bin/cloudflared tunnel create $TUNNEL_NAME
+        if [ ! -f "$CREDENTIALS_FILE" ] || [ ! -s "$CREDENTIALS_FILE" ]; then
+            echo -e "${RED}仍然无法生成有效凭证文件，请检查 cloudflared 权限、登录状态或磁盘空间${NC}"
+            df -h
+            ls -ld /root/.cloudflared
+            exit 1
+        fi
+    fi
+
     CONFIG_FILE="/root/.cloudflared/config.yml"
     cat > $CONFIG_FILE <<EOF
 tunnel: $TUNNEL_NAME
-credentials-file: /root/.cloudflared/${TUNNEL_NAME}.json
+credentials-file: $CREDENTIALS_FILE
 ingress:
   - hostname: $TUNNEL_DOMAIN
     service: $LOCAL_SERVICE
@@ -186,6 +201,8 @@ EOF
         echo -e "${GREEN}安装 cloudflared 为系统服务...${NC}"
         /usr/local/bin/cloudflared service install
         if [ $? -eq 0 ] && [ -f /etc/systemd/system/cloudflared.service ]; then
+            # 更新服务文件以匹配配置文件和隧道名称
+            sed -i "s|--config .* tunnel run|--config $CONFIG_FILE tunnel run $TUNNEL_NAME|" /etc/systemd/system/cloudflared.service
             systemctl daemon-reload
             systemctl enable cloudflared
             systemctl start cloudflared
