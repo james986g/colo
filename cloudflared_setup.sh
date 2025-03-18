@@ -257,8 +257,8 @@ setup_argo_service() {
     install_cloudflared
 
     # 输入本地服务地址并验证
-    read -p "请输入本地服务的地址和端口（默认 http://localhost:8080）： " LOCAL_SERVICE
-    [ -z "$LOCAL_SERVICE" ] && LOCAL_SERVICE="http://localhost:8080"
+    read -p "请输入本地服务的地址和端口，避免与固定tunnel冲突需要更改xray监听（默认 http://localhost:1234）： " LOCAL_SERVICE
+    [ -z "$LOCAL_SERVICE" ] && LOCAL_SERVICE="http://localhost:1234"
     LOCAL_PORT=$(echo "$LOCAL_SERVICE" | grep -oP '(?<=:)\d+')
     if ! ss -tuln | grep -q ":${LOCAL_PORT} "; then
         echo -e "${RED}错误：本地服务 $LOCAL_SERVICE 未运行${NC}"
