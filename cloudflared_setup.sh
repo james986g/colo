@@ -144,22 +144,40 @@ configure_tunnel() {
         read -p "请输入选项 (1 或 2): " TUNNEL_CHOICE
         if [ "$TUNNEL_CHOICE" = "1" ]; then
             cloudflared tunnel list
-            read -p "请输入要使用的 Tunnel 名称： " TUNNEL_NAME
-            CREDENTIALS_FILE=$(ls -t /root/.cloudflared/*.json | head -n 1)
-            TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
+            read -p "请输入要使用的 Tunnel ID（UUID）： " TUNNEL_ID
+            CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_ID}.json"
+            [ ! -f "$CREDENTIALS_FILE" ] && {
+                echo -e "${RED}错误：凭证文件 $CREDENTIALS_FILE 不存在${NC}"
+                exit 1
+            }
+            TUNNEL_NAME=$(cloudflared tunnel info "$TUNNEL_ID" | grep "Name" | awk '{print $2}')
         else
             TUNNEL_NAME="my-tunnel-$(date +%s)"
             echo -e "${GREEN}创建新 Tunnel：$TUNNEL_NAME${NC}"
-            cloudflared tunnel create "$TUNNEL_NAME"
-            CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_NAME}.json"
-            TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
+            cloudflared tunnel create "$TUNNEL_NAME" || {
+                echo -e "${RED}创建 Tunnel 失败，请检查 Cloudflare 账户权限或网络${NC}"
+                exit 1
+            }
+            TUNNEL_ID=$(cloudflared tunnel list | grep "$TUNNEL_NAME" | awk '{print $1}')
+            CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_ID}.json"
+            [ ! -f "$CREDENTIALS_FILE" ] && {
+                echo -e "${RED}错误：凭证文件 $CREDENTIALS_FILE 未生成${NC}"
+                exit 1
+            }
         fi
     else
         TUNNEL_NAME="my-tunnel-$(date +%s)"
         echo -e "${GREEN}创建新 Tunnel：$TUNNEL_NAME${NC}"
-        cloudflared tunnel create "$TUNNEL_NAME"
-        CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_NAME}.json"
-        TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
+        cloudflared tunnel create "$TUNNEL_NAME" || {
+            echo -e "${RED}创建 Tunnel 失败，请检查 Cloudflare 账户权限或网络${NC}"
+            exit 1
+        }
+        TUNNEL_ID=$(cloudflared tunnel list | grep "$TUNNEL_NAME" | awk '{print $1}')
+        CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_ID}.json"
+        [ ! -f "$CREDENTIALS_FILE" ] && {
+            echo -e "${RED}错误：凭证文件 $CREDENTIALS_FILE 未生成${NC}"
+            exit 1
+        }
     fi
 
     # 生成配置文件
@@ -174,22 +192,25 @@ ingress:
 EOF
 
     echo -e "${GREEN}配置文件已生成：$CONFIG_FILE${NC}"
-    cloudflared tunnel route dns "$TUNNEL_NAME" "$TUNNEL_DOMAIN"
+    cloudflared tunnel route dns "$TUNNEL_ID" "$TUNNEL_DOMAIN" || {
+        echo -e "${RED}DNS 路由添加失败，请检查域名权限${NC}"
+        exit 1
+    }
 
     # 清理旧进程并启动新 Tunnel
     systemctl stop cloudflared 2>/dev/null
-    pkill -f "cloudflared.*tunnel.*run" 2>/dev/null
+    pkill -f "cloudflared.*tunnel.*run.*$TUNNEL_ID" 2>/dev/null
     cloudflared --config "$CONFIG_FILE" --logfile /var/log/cloudflared.log tunnel run "$TUNNEL_ID" &
     TUNNEL_PID=$!
-    sleep 5
+    sleep 10  # 延长等待时间，确保进程启动完成
 
-    # 检查进程状态并解析日志
+    # 检查进程状态并解析最新日志
     if ps -p "$TUNNEL_PID" > /dev/null; then
         echo -e "${GREEN}Tunnel 已启动 (PID: $TUNNEL_PID)${NC}"
     else
         echo -e "${RED}Tunnel 启动失败，请检查以下日志${NC}"
-        tail -n 10 /var/log/cloudflared.log | grep -i "error" && {
-            echo -e "${RED}错误详情：$(tail -n 10 /var/log/cloudflared.log | grep -i "error" | head -n 1)${NC}"
+        tail -n 20 /var/log/cloudflared.log | grep -i "error" && {
+            echo -e "${RED}错误详情：$(tail -n 20 /var/log/cloudflared.log | grep -i "error" | tail -n 1)${NC}"
         }
         exit 1
     fi
@@ -208,7 +229,6 @@ EOF
         }
     fi
 }
-
 # 设置临时 Argo Tunnel 的服务
 setup_argo_service() {
     install_cloudflared
