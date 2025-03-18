@@ -64,7 +64,7 @@ check_existing_cloudflared() {
     [ -d /root/.cloudflared ] && echo "找到 cloudflared 配置文件目录：/root/.cloudflared"
     systemctl is-active cloudflared &>/dev/null && echo "找到运行中的 cloudflared 服务"
 
-    return $CLOUFDFLARED_EXISTS
+    return $CLOUDFLARED_EXISTS
 }
 
 # 下载 cloudflared 的辅助函数
@@ -338,6 +338,7 @@ EOF
     echo -e "${RED}多次尝试失败，请检查网络、本地服务或使用命名隧道${NC}"
     exit 1
 }
+
 # 获取临时隧道域名
 get_tunnel_domain() {
     local METRICS_PORT=$1
@@ -360,21 +361,31 @@ get_tunnel_domain() {
     fi
 }
 
-# 更换 Argo 隧道
+# 更换 Argo 隧道为临时隧道
 replace_argo_tunnel() {
-    echo -e "${GREEN}更换 Argo 隧道...${NC}"
+    echo -e "${GREEN}正在将现有 Argo 隧道更换为临时隧道...${NC}"
+
+    # 停止并清理现有命名隧道
     systemctl stop cloudflared 2>/dev/null
     pkill -f "cloudflared.*tunnel.*run" 2>/dev/null
     if [ -f /root/.cloudflared/config.yml ]; then
         CONFIG_FILE="/root/.cloudflared/config.yml"
         TUNNEL_ID=$(grep "tunnel:" "$CONFIG_FILE" | awk '{print $2}')
         CREDENTIALS_FILE=$(grep "credentials-file:" "$CONFIG_FILE" | awk '{print $2}')
-        echo -e "${GREEN}删除现有隧道：$TUNNEL_ID${NC}"
+        echo -e "${GREEN}删除现有命名隧道：$TUNNEL_ID${NC}"
         /usr/local/bin/cloudflared tunnel delete "$TUNNEL_ID" 2>/dev/null
         rm -f "$CREDENTIALS_FILE" "$CONFIG_FILE"
     fi
-    configure_tunnel
-    echo -e "${GREEN}Argo 隧道已更换${NC}"
+
+    # 停止现有的临时隧道服务（如果有）
+    systemctl stop argo 2>/dev/null
+    systemctl disable argo 2>/dev/null
+    rm -f /etc/systemd/system/argo.service
+    systemctl daemon-reload
+
+    # 创建新的临时隧道
+    setup_argo_service
+    echo -e "${GREEN}已成功更换为临时 Argo 隧道${NC}"
 }
 
 # 卸载 Cloudflare Tunnel
@@ -399,7 +410,7 @@ show_menu() {
     echo "1) 安装 Cloudflare Tunnel"
     echo "2) 卸载 Cloudflare Tunnel"
     echo "3) 生成临时 Argo Tunnel"
-    echo "4) 更换 Argo 隧道"
+    echo "4) 更换为临时 Argo 隧道"
     echo "5) 退出"
     echo -e "${YELLOW}快捷键：按 't' 快速生成临时隧道${NC}"
 }
