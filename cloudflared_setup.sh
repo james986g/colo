@@ -265,11 +265,6 @@ setup_argo_service() {
         echo "请先启动本地服务，例如：'python -m http.server $LOCAL_PORT'"
         exit 1
     fi
-    # 检查本地服务是否可达
-    if ! wget -q --spider "$LOCAL_SERVICE" --tries=3 --timeout=5; then
-        echo -e "${RED}错误：无法连接到 $LOCAL_SERVICE，请确保服务正常运行#使用命令开启简单的http服务python3 -m http.server 1234 &${NC}"
-        exit 1
-    fi
 
     # 检查 metrics 端口
     METRICS_PORT="9999"
