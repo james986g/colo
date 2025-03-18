@@ -244,16 +244,19 @@ EOF
 setup_argo_service() {
     install_cloudflared
     read -p "请输入本地服务的地址和端口（例如 http://localhost:8080）： " LOCAL_SERVICE
-    LOCAL_PORT=$(echo $LOCAL_SERVICE | grep -oP '(?<=:)\d+')
-    if ! netstat -tuln | grep -q ":${LOCAL_PORT} "; then
-        echo -e "${RED}警告：本地服务 $LOCAL_SERVICE 未运行${NC}"
-        read -p "是否继续？(y/n): " CONTINUE
-        [ "$CONTINUE" != "y" ] && [ "$CONTINUE" != "Y" ] && exit 1
+    LOCAL_PORT=$(echo "$LOCAL_SERVICE" | grep -oP '(?<=:)\d+')
+    if ! ss -tuln | grep -q ":${LOCAL_PORT} "; then
+        echo -e "${RED}错误：本地服务 $LOCAL_SERVICE 未运行${NC}"
+        echo "请先启动本地服务，例如使用 'python -m http.server 8080' 或其他服务"
+        exit 1
     fi
 
-    # 定义变量以适配脚本环境
     WORK_DIR="/usr/local/bin"
-    METRICS_PORT="9999" # 默认端口，可根据需要调整
+    METRICS_PORT="9999"
+    if ss -tuln | grep -q ":${METRICS_PORT} "; then
+        echo -e "${RED}错误：metrics 端口 $METRICS_PORT 已被占用${NC}"
+        read -p "请输入新的 metrics 端口（例如 9998）： " METRICS_PORT
+    fi
 
     echo -e "${GREEN}设置临时 Argo Tunnel 服务...${NC}"
     cat > /etc/systemd/system/argo.service << EOF
@@ -265,7 +268,7 @@ After=network.target
 Type=simple
 NoNewPrivileges=yes
 TimeoutStartSec=0
-ExecStart=$WORK_DIR/cloudflared tunnel --edge-ip-version auto --no-autoupdate --metrics 0.0.0.0:${METRICS_PORT} --url $LOCAL_SERVICE
+ExecStart=$WORK_DIR/cloudflared tunnel --edge-ip-version auto --no-autoupdate --metrics 0.0.0.0:${METRICS_PORT} --url $LOCAL_SERVICE --logfile /var/log/cloudflared_argo.log
 Restart=on-failure
 RestartSec=5s
 
@@ -275,11 +278,16 @@ EOF
 
     systemctl daemon-reload
     systemctl enable --now argo
-    if [ "$(systemctl is-active argo)" = 'active' ]; then
+    sleep 5  # 等待服务启动
+    if systemctl is-active argo &> /dev/null; then
         echo -e "${GREEN}临时 Argo Tunnel 启动成功${NC}"
     else
         echo -e "${RED}临时 Argo Tunnel 启动失败${NC}"
         systemctl status argo
+        [ -f /var/log/cloudflared_argo.log ] && {
+            echo -e "${YELLOW}检查 cloudflared 日志：${NC}"
+            tail -n 20 /var/log/cloudflared_argo.log
+        }
         exit 1
     fi
 
@@ -288,18 +296,27 @@ EOF
 
 # 获取临时隧道域名
 get_tunnel_domain() {
-    local a=5
-    METRICS_PORT="9999" # 与 setup_argo_service 中保持一致
-    until [[ -n "$ARGO_DOMAIN" || "$a" = 0 ]]; do
-        sleep 2
-        ARGO_DOMAIN=$(wget -qO- http://localhost:${METRICS_PORT}/quicktunnel 2>/dev/null | awk -F '"' '{print $4}')
-        ((a--)) || true
+    local a=10  # 增加重试次数
+    METRICS_PORT="9999"  # 与 setup_argo_service 保持一致
+    ARGO_DOMAIN=""
+    echo -e "${YELLOW}正在获取临时隧道域名...${NC}"
+    until [[ -n "$ARGO_DOMAIN" || "$a" -eq 0 ]]; do
+        sleep 3
+        ARGO_DOMAIN=$(wget -qO- --tries=3 --timeout=5 "http://localhost:${METRICS_PORT}/quicktunnel" 2>/dev/null | awk -F '"' '{print $4}')
+        ((a--))
+        [ -n "$ARGO_DOMAIN" ] && break
+        echo -e "${YELLOW}尝试获取域名 ($a 次剩余)${NC}"
     done
     if [ -n "$ARGO_DOMAIN" ]; then
         echo -e "${GREEN}临时隧道域名: $ARGO_DOMAIN${NC}"
     else
         echo -e "${RED}无法获取临时隧道域名，请检查服务状态${NC}"
         systemctl status argo
+        [ -f /var/log/cloudflared_argo.log ] && {
+            echo -e "${YELLOW}检查 cloudflared 日志：${NC}"
+            tail -n 20 /var/log/cloudflared_argo.log
+        }
+        exit 1
     fi
 }
 
