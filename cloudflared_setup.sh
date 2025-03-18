@@ -197,21 +197,32 @@ EOF
         exit 1
     }
 
-    # 清理旧进程并启动新 Tunnel
+    # 清理旧日志和进程
+    echo -e "${YELLOW}清理旧日志和进程...${NC}"
+    [ -f /var/log/cloudflared.log ] && mv /var/log/cloudflared.log /var/log/cloudflared.log.bak
     systemctl stop cloudflared 2>/dev/null
     pkill -f "cloudflared.*tunnel.*run.*$TUNNEL_ID" 2>/dev/null
+
+    # 启动 Tunnel 并调试
+    echo -e "${GREEN}启动 Tunnel（隧道 ID: $TUNNEL_ID）...${NC}"
     cloudflared --config "$CONFIG_FILE" --logfile /var/log/cloudflared.log tunnel run "$TUNNEL_ID" &
     TUNNEL_PID=$!
-    sleep 10  # 延长等待时间，确保进程启动完成
+    sleep 15  # 延长等待时间，确保日志有内容
 
-    # 检查进程状态并解析最新日志
+    # 检查进程状态
     if ps -p "$TUNNEL_PID" > /dev/null; then
         echo -e "${GREEN}Tunnel 已启动 (PID: $TUNNEL_PID)${NC}"
+        tail -n 10 /var/log/cloudflared.log  # 显示启动后的最新日志
     else
         echo -e "${RED}Tunnel 启动失败，请检查以下日志${NC}"
-        tail -n 20 /var/log/cloudflared.log | grep -i "error" && {
-            echo -e "${RED}错误详情：$(tail -n 20 /var/log/cloudflared.log | grep -i "error" | tail -n 1)${NC}"
-        }
+        if [ -f /var/log/cloudflared.log ]; then
+            tail -n 20 /var/log/cloudflared.log
+            tail -n 20 /var/log/cloudflared.log | grep -i "error" && {
+                echo -e "${RED}错误详情：$(tail -n 20 /var/log/cloudflared.log | grep -i "error" | tail -n 1)${NC}"
+            }
+        else
+            echo -e "${RED}日志文件未生成，可能是 cloudflared 未正确启动${NC}"
+        fi
         exit 1
     fi
 
