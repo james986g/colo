@@ -147,8 +147,8 @@ get_domain_and_service() {
         fi
     done
 
-    read -p "请输入 VPS 本地服务的地址和端口（默认 http://localhost:80）： " LOCAL_SERVICE
-    [ -z "$LOCAL_SERVICE" ] && LOCAL_SERVICE="http://localhost:80"
+    read -p "请输入 VPS 本地服务的地址和端口（默认 http://localhost:8080）： " LOCAL_SERVICE
+    [ -z "$LOCAL_SERVICE" ] && LOCAL_SERVICE="http://localhost:8080"
     if ! echo "$LOCAL_SERVICE" | grep -q "^http://\|^https://"; then
         LOCAL_SERVICE="http://$LOCAL_SERVICE"
         echo -e "${YELLOW}未指定协议，已自动添加 http:// 前缀：$LOCAL_SERVICE${NC}"
