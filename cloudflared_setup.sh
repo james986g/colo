@@ -267,7 +267,7 @@ setup_argo_service() {
     fi
     # 检查本地服务是否可达
     if ! wget -q --spider "$LOCAL_SERVICE" --tries=3 --timeout=5; then
-        echo -e "${RED}错误：无法连接到 $LOCAL_SERVICE，请确保服务正常运行${NC}"
+        echo -e "${RED}错误：无法连接到 $LOCAL_SERVICE，请确保服务正常运行#使用命令开启简单的http服务python3 -m http.server 1234 &${NC}"
         exit 1
     fi
 
