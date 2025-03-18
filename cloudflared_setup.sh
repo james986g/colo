@@ -255,19 +255,33 @@ EOF
 # 设置临时 Argo Tunnel 服务
 setup_argo_service() {
     install_cloudflared
+
+    # 输入本地服务地址并验证
     read -p "请输入本地服务的地址和端口（默认 http://localhost:8080）： " LOCAL_SERVICE
     [ -z "$LOCAL_SERVICE" ] && LOCAL_SERVICE="http://localhost:8080"
     LOCAL_PORT=$(echo "$LOCAL_SERVICE" | grep -oP '(?<=:)\d+')
     if ! ss -tuln | grep -q ":${LOCAL_PORT} "; then
         echo -e "${RED}错误：本地服务 $LOCAL_SERVICE 未运行${NC}"
+        echo "请先启动本地服务，例如：'python -m http.server $LOCAL_PORT'"
+        exit 1
+    fi
+    # 检查本地服务是否可达
+    if ! wget -q --spider "$LOCAL_SERVICE" --tries=3 --timeout=5; then
+        echo -e "${RED}错误：无法连接到 $LOCAL_SERVICE，请确保服务正常运行${NC}"
         exit 1
     fi
 
+    # 检查 metrics 端口
     METRICS_PORT="9999"
     if ss -tuln | grep -q ":${METRICS_PORT} "; then
         read -p "端口 $METRICS_PORT 已被占用，请输入新端口（例如 9998）： " METRICS_PORT
+        if ss -tuln | grep -q ":${METRICS_PORT} "; then
+            echo -e "${RED}错误：新端口 $METRICS_PORT 仍被占用${NC}"
+            exit 1
+        fi
     fi
 
+    # 创建服务文件
     echo -e "${GREEN}设置临时 Argo Tunnel 服务...${NC}"
     cat > /etc/systemd/system/argo.service <<EOF
 [Unit]
@@ -278,7 +292,7 @@ After=network.target
 Type=simple
 NoNewPrivileges=yes
 TimeoutStartSec=0
-ExecStart=/usr/local/bin/cloudflared tunnel --edge-ip-version auto --no-autoupdate --metrics 0.0.0.0:${METRICS_PORT} --url $LOCAL_SERVICE --logfile /var/log/cloudflared_argo.log
+ExecStart=/usr/local/bin/cloudflared tunnel --edge-ip-version auto --no-autoupdate --metrics 0.0.0.0:${METRICS_PORT} --url $LOCAL_SERVICE --logfile /var/log/cloudflared_argo.log --no-tls-verify
 Restart=on-failure
 RestartSec=5s
 
@@ -286,24 +300,44 @@ RestartSec=5s
 WantedBy=multi-user.target
 EOF
 
+    # 启动服务
     systemctl daemon-reload
     systemctl enable --now argo
-    for i in {5..1}; do
+
+    # 等待服务启动并检查状态
+    local retries=3
+    for i in {10..1}; do
         echo -e "${YELLOW}等待服务启动 ($i 秒剩余)...${NC}"
         sleep 1
     done
+    while [ "$retries" -gt 0 ]; do
+        if systemctl is-active argo &>/dev/null; then
+            echo -e "${GREEN}临时 Argo Tunnel 启动成功${NC}"
+            get_tunnel_domain "$METRICS_PORT"
+            return
+        else
+            echo -e "${RED}临时 Argo Tunnel 启动失败（剩余 $retries 次尝试）${NC}"
+            systemctl status argo -n 10
+            if [ -f /var/log/cloudflared_argo.log ]; then
+                echo -e "${YELLOW}最新日志：${NC}"
+                tail -n 20 /var/log/cloudflared_argo.log
+                if tail -n 20 /var/log/cloudflared_argo.log | grep -qi "429 Too Many Requests"; then
+                    echo -e "${RED}检测到 429 错误（请求过于频繁），请稍后重试或使用命名隧道${NC}"
+                elif tail -n 20 /var/log/cloudflared_argo.log | grep -qi "ping_group_range"; then
+                    echo -e "${YELLOW}检测到 ICMP 权限问题，正在尝试修复...${NC}"
+                    echo "1 65535" > /proc/sys/net/ipv4/ping_group_range  # 调整 ping_group_range
+                    systemctl restart argo
+                fi
+            fi
+            ((retries--))
+            sleep 5
+            systemctl restart argo
+        fi
+    done
 
-    if systemctl is-active argo &>/dev/null; then
-        echo -e "${GREEN}临时 Argo Tunnel 启动成功${NC}"
-        get_tunnel_domain "$METRICS_PORT"
-    else
-        echo -e "${RED}临时 Argo Tunnel 启动失败${NC}"
-        systemctl status argo
-        [ -f /var/log/cloudflared_argo.log ] && tail -n 20 /var/log/cloudflared_argo.log
-        exit 1
-    fi
+    echo -e "${RED}多次尝试失败，请检查网络、本地服务或使用命名隧道${NC}"
+    exit 1
 }
-
 # 获取临时隧道域名
 get_tunnel_domain() {
     local METRICS_PORT=$1
