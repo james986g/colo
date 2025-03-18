@@ -279,15 +279,31 @@ EOF
     systemctl daemon-reload
     systemctl enable --now argo
     sleep 5  # 等待服务启动
-    if systemctl is-active argo &> /dev/null; then
-        echo -e "${GREEN}临时 Argo Tunnel 启动成功${NC}"
-    else
-        echo -e "${RED}临时 Argo Tunnel 启动失败${NC}"
-        systemctl status argo
-        [ -f /var/log/cloudflared_argo.log ] && {
-            echo -e "${YELLOW}检查 cloudflared 日志：${NC}"
-            tail -n 20 /var/log/cloudflared_argo.log
-        }
+
+    local retries=3
+    while [ "$retries" -gt 0 ]; do
+        if systemctl is-active argo &> /dev/null; then
+            echo -e "${GREEN}临时 Argo Tunnel 启动成功${NC}"
+            break
+        else
+            echo -e "${RED}临时 Argo Tunnel 启动失败（尝试剩余 $retries 次）${NC}"
+            systemctl status argo
+            [ -f /var/log/cloudflared_argo.log ] && {
+                echo -e "${YELLOW}检查 cloudflared 日志：${NC}"
+                tail -n 20 /var/log/cloudflared_argo.log
+                if tail -n 20 /var/log/cloudflared_argo.log | grep -q "429 Too Many Requests"; then
+                    echo -e "${RED}检测到 429 错误（请求过于频繁），请稍后重试或使用命名隧道${NC}"
+                    echo "命名隧道配置参考：https://developers.cloudflare.com/cloudflare-one/connections/connect-apps"
+                fi
+            }
+            ((retries--))
+            sleep 10
+            systemctl restart argo
+        fi
+    done
+
+    if [ "$retries" -eq 0 ]; then
+        echo -e "${RED}多次尝试失败，建议使用命名隧道替代临时隧道${NC}"
         exit 1
     fi
 
@@ -296,7 +312,7 @@ EOF
 
 # 获取临时隧道域名
 get_tunnel_domain() {
-    local a=10  # 增加重试次数
+    local a=10
     METRICS_PORT="9999"  # 与 setup_argo_service 保持一致
     ARGO_DOMAIN=""
     echo -e "${YELLOW}正在获取临时隧道域名...${NC}"
@@ -319,7 +335,6 @@ get_tunnel_domain() {
         exit 1
     fi
 }
-
 # 更换 Argo 隧道
 replace_argo_tunnel() {
     echo -e "${GREEN}更换 Argo 隧道...${NC}"
