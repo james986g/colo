@@ -101,52 +101,70 @@ configure_tunnel() {
     export PATH=$PATH:/usr/local/bin
     if [ ! -f /root/.cloudflared/cert.pem ]; then
         echo -e "${GREEN}正在登录 Cloudflare...${NC}"
-        /usr/local/bin/cloudflared login
-        if [ ! -f /root/.cloudflared/cert.pem ]; then
+        cloudflared login
+        [ ! -f /root/.cloudflared/cert.pem ] && {
             echo -e "${RED}登录失败，请确保正确完成浏览器认证${NC}"
             exit 1
-        fi
+        }
     else
         echo -e "${GREEN}已检测到登录凭证，跳过登录步骤${NC}"
     fi
 
-    read -p "请输入要使用的域名（例如 tunnel.example.com）： " TUNNEL_DOMAIN
-    read -p "请输入 VPS 本地服务的地址和端口（例如 http://localhost:80）： " LOCAL_SERVICE
+    # 输入域名并验证不含端口
+    while true; do
+        read -p "请输入要使用的域名（例如 tunnel.example.com，不含端口）： " TUNNEL_DOMAIN
+        if echo "$TUNNEL_DOMAIN" | grep -q ":"; then
+            echo -e "${RED}错误：域名不能包含端口号，请重新输入${NC}"
+        elif [[ ! "$TUNNEL_DOMAIN" =~ ^[a-zA-Z0-9.-]+$ ]]; then
+            echo -e "${RED}错误：域名格式无效，请重新输入${NC}"
+        else
+            break
+        fi
+    done
 
-    LOCAL_PORT=$(echo $LOCAL_SERVICE | grep -oP '(?<=:)\d+')
-    if ! netstat -tuln | grep -q ":${LOCAL_PORT} "; then
+    # 输入本地服务地址
+    read -p "请输入 VPS 本地服务的地址和端口（例如 http://localhost:80）： " LOCAL_SERVICE
+    if ! echo "$LOCAL_SERVICE" | grep -q "^http://\|^https://"; then
+        LOCAL_SERVICE="http://$LOCAL_SERVICE"
+        echo -e "${YELLOW}未指定协议，已自动添加 http:// 前缀：$LOCAL_SERVICE${NC}"
+    fi
+
+    LOCAL_PORT=$(echo "$LOCAL_SERVICE" | grep -oP '(?<=:)\d+')
+    if ! ss -tuln | grep -q ":${LOCAL_PORT} "; then
         echo -e "${RED}警告：本地服务 $LOCAL_SERVICE 未运行${NC}"
         read -p "是否继续？(y/n): " CONTINUE
         [ "$CONTINUE" != "y" ] && [ "$CONTINUE" != "Y" ] && exit 1
     fi
 
-    if [ -n "$(/usr/local/bin/cloudflared tunnel list | grep -v 'No tunnels')" ]; then
+    # 创建或选择 Tunnel
+    if cloudflared tunnel list | grep -qv 'No tunnels'; then
         echo -e "${GREEN}检测到现有 Tunnel，请选择：${NC}"
         echo "1) 使用现有 Tunnel"
         echo "2) 创建新 Tunnel"
         read -p "请输入选项 (1 或 2): " TUNNEL_CHOICE
         if [ "$TUNNEL_CHOICE" = "1" ]; then
-            /usr/local/bin/cloudflared tunnel list
+            cloudflared tunnel list
             read -p "请输入要使用的 Tunnel 名称： " TUNNEL_NAME
             CREDENTIALS_FILE=$(ls -t /root/.cloudflared/*.json | head -n 1)
             TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
         else
             TUNNEL_NAME="my-tunnel-$(date +%s)"
             echo -e "${GREEN}创建新 Tunnel：$TUNNEL_NAME${NC}"
-            /usr/local/bin/cloudflared tunnel create $TUNNEL_NAME
+            cloudflared tunnel create "$TUNNEL_NAME"
             CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_NAME}.json"
             TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
         fi
     else
         TUNNEL_NAME="my-tunnel-$(date +%s)"
         echo -e "${GREEN}创建新 Tunnel：$TUNNEL_NAME${NC}"
-        /usr/local/bin/cloudflared tunnel create $TUNNEL_NAME
+        cloudflared tunnel create "$TUNNEL_NAME"
         CREDENTIALS_FILE="/root/.cloudflared/${TUNNEL_NAME}.json"
         TUNNEL_ID=$(basename "$CREDENTIALS_FILE" .json)
     fi
 
+    # 生成配置文件
     CONFIG_FILE="/root/.cloudflared/config.yml"
-    cat > $CONFIG_FILE <<EOF
+    cat > "$CONFIG_FILE" <<EOF
 tunnel: $TUNNEL_ID
 credentials-file: $CREDENTIALS_FILE
 ingress:
@@ -156,34 +174,38 @@ ingress:
 EOF
 
     echo -e "${GREEN}配置文件已生成：$CONFIG_FILE${NC}"
-    /usr/local/bin/cloudflared tunnel route dns $TUNNEL_NAME $TUNNEL_DOMAIN
+    cloudflared tunnel route dns "$TUNNEL_NAME" "$TUNNEL_DOMAIN"
 
+    # 清理旧进程并启动新 Tunnel
     systemctl stop cloudflared 2>/dev/null
     pkill -f "cloudflared.*tunnel.*run" 2>/dev/null
-    /usr/local/bin/cloudflared --config $CONFIG_FILE --logfile /var/log/cloudflared.log tunnel run $TUNNEL_ID &
+    cloudflared --config "$CONFIG_FILE" --logfile /var/log/cloudflared.log tunnel run "$TUNNEL_ID" &
     TUNNEL_PID=$!
     sleep 5
-    if ps -p $TUNNEL_PID > /dev/null; then
+
+    # 检查进程状态并解析日志
+    if ps -p "$TUNNEL_PID" > /dev/null; then
         echo -e "${GREEN}Tunnel 已启动 (PID: $TUNNEL_PID)${NC}"
     else
-        echo -e "${RED}Tunnel 启动失败，请检查日志${NC}"
-        cat /var/log/cloudflared.log
+        echo -e "${RED}Tunnel 启动失败，请检查以下日志${NC}"
+        tail -n 10 /var/log/cloudflared.log | grep -i "error" && {
+            echo -e "${RED}错误详情：$(tail -n 10 /var/log/cloudflared.log | grep -i "error" | head -n 1)${NC}"
+        }
         exit 1
     fi
 
+    # 安装为系统服务
     read -p "是否将 Tunnel 安装为系统服务？(y/n): " INSTALL_SERVICE
     if [ "$INSTALL_SERVICE" = "y" ] || [ "$INSTALL_SERVICE" = "Y" ]; then
-        /usr/local/bin/cloudflared --config $CONFIG_FILE service install
+        cloudflared --config "$CONFIG_FILE" service install
         systemctl daemon-reload
         systemctl enable cloudflared
         systemctl start cloudflared
-        if systemctl is-active cloudflared &> /dev/null; then
-            echo -e "${GREEN}cloudflared 服务已启动${NC}"
-        else
+        systemctl is-active cloudflared &> /dev/null && echo -e "${GREEN}cloudflared 服务已启动${NC}" || {
             echo -e "${RED}服务启动失败${NC}"
             systemctl status cloudflared
             exit 1
-        fi
+        }
     fi
 }
 
