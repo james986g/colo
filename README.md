@@ -15,7 +15,7 @@ wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/argo_temp.
 chmod +x argo_temp.sh
 ./argo_temp.sh
 ```
-自己写的
+自己写的tunnel可以用！！
 ```
 wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/cloudflared_setup.sh -O cloudflared_setup.sh
 chmod +x cloudflared_setup.sh
