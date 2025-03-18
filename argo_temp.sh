@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
-# 当前脚本版本号
-VERSION='1.6.6 (2024.12.24)'
+# 当前脚本版本号 (自用）
+VERSION='1.6.7 (2025.3.18)'
 
 # 各变量默认值
 WS_PATH_DEFAULT='argox'
 WORK_DIR='/etc/argox'
 TEMP_DIR='/tmp/argox'
-TLS_SERVER=addons.mozilla.org
+TLS_SERVER=rr4---sn-30a7ynl7.googlevideo.com
 METRICS_PORT='3333'
-CDN_DOMAIN=("8cc.free.hr" "cm.yutian.us.kg" "fan.yutian.us.kg" "xn--b6gac.eu.org" "dash.cloudflare.com" "skk.moe" "visa.com")
+CDN_DOMAIN=("104.21.9.214" "104.17.147.22" "104.18.8.53" "104.16.209.12" "dash.cloudflare.com" "skk.moe" "visa.com")
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -1052,7 +1052,6 @@ while getopts ":AaXxTtUuNnVvBbF:f:" OPTNAME; do
     u ) select_language; check_system_info; uninstall; exit 0;;
     n ) select_language; check_system_info; export_list; exit 0 ;;
     v ) select_language; check_arch; version; exit 0;;
-    b ) select_language; bash <(wget --no-check-certificate -qO- "https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcp.sh"); exit ;;
     f ) VARIABLE_FILE=$OPTARG; . $VARIABLE_FILE ;;
   esac
 done
