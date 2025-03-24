@@ -9,7 +9,7 @@ wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/clean_vps.
 chmod +x clean_vps.sh
 ./clean_vps.sh
 ```
-argo tunnel
+argo tunnel+xray 
 ```
 wget https://raw.githubusercontent.com/james986g/colo/refs/heads/main/argo_temp.sh -O argo_temp.sh
 chmod +x argo_temp.sh
