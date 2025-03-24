@@ -804,7 +804,7 @@ create_shortcut() {
   cat > $WORK_DIR/ax.sh << EOF
 #!/usr/bin/env bash
 
-bash <(wget --no-check-certificate -qO- https://raw.githubusercontent.com/james986g/colo/refs/heads/main/argo_temp.sh -O argo_temp.sh) \$1
+bash <(wget --no-check-certificate -qO- https://raw.githubusercontent.com/james986g/colo/refs/heads/main/argo_temp.sh \$1
 EOF
   chmod +x $WORK_DIR/ax.sh
   ln -sf $WORK_DIR/ax.sh /usr/bin/argox
