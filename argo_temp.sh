@@ -7,7 +7,7 @@ VERSION='1.6.7 (2025.3.18)'
 WS_PATH_DEFAULT='argox'
 WORK_DIR='/etc/argox'
 TEMP_DIR='/tmp/argox'
-TLS_SERVER=rr4---sn-30a7ynl7.googlevideo.com
+TLS_SERVER=youtubei.googleapis.com
 METRICS_PORT='3333'
 CDN_DOMAIN=("104.21.9.214" "104.17.147.22" "104.18.8.53" "104.16.209.12" "dash.cloudflare.com" "skk.moe" "visa.com")
 
@@ -21,16 +21,16 @@ E[0]="Language:\n 1. English (default) \n 2. 简体中文"
 C[0]="${E[0]}"
 E[1]="Refactored the chatGPT detection method based on lmc999's detection and unlocking script."
 C[1]="根据 lmc999 的检测解锁脚本，重构了检测 chatGPT 方法"
-E[2]="Project to create Argo tunnels and Xray specifically for VPS, detailed:[https://github.com/fscarmen/argox]\n Features:\n\t • Allows the creation of Argo tunnels via Token, Json and ad hoc methods. User can easily obtain the json at https://fscarmen.cloudflare.now.cc .\n\t • Extremely fast installation method, saving users time.\n\t • Support system: Ubuntu, Debian, CentOS, Alpine and Arch Linux 3.\n\t • Support architecture: AMD,ARM and s390x\n"
-C[2]="本项目专为 VPS 添加 Argo 隧道及 Xray,详细说明: [https://github.com/fscarmen/argox]\n 脚本特点:\n\t • 允许通过 Token, Json 及 临时方式来创建 Argo 隧道,用户通过以下网站轻松获取 json: https://fscarmen.cloudflare.now.cc\n\t • 极速安装方式,大大节省用户时间\n\t • 智能判断操作系统: Ubuntu 、Debian 、CentOS 、Alpine 和 Arch Linux,请务必选择 LTS 系统\n\t • 支持硬件结构类型: AMD 和 ARM\n"
+E[2]="Project to create Argo tunnels and Xray specifically for VPS, detailed:[https://github.com/fsm/argox]\n Features:\n\t • Allows the creation of Argo tunnels via Token, Json and ad hoc methods. User can easily obtain the json at https://fsm.cloudflare.now.cc .\n\t • Extremely fast installation method, saving users time.\n\t • Support system: Ubuntu, Debian, CentOS, Alpine and Arch Linux 3.\n\t • Support architecture: AMD,ARM and s390x\n"
+C[2]="本项目专为 VPS 添加 Argo 隧道及 Xray,详细说明: [https://github.com/fsm/argox]\n 脚本特点:\n\t • 允许通过 Token, Json 及 临时方式来创建 Argo 隧道,用户通过以下网站轻松获取 json: https://fsm.cloudflare.now.cc\n\t • 极速安装方式,大大节省用户时间\n\t • 智能判断操作系统: Ubuntu 、Debian 、CentOS 、Alpine 和 Arch Linux,请务必选择 LTS 系统\n\t • 支持硬件结构类型: AMD 和 ARM\n"
 E[3]="Input errors up to 5 times.The script is aborted."
 C[3]="输入错误达5次,脚本退出"
 E[4]="UUID should be 36 characters, please re-enter \(\${a} times remaining\)"
 C[4]="UUID 应为36位字符,请重新输入 \(剩余\${a}次\)"
-E[5]="The script supports Debian, Ubuntu, CentOS, Alpine or Arch systems only. Feedback: [https://github.com/fscarmen/argox/issues]"
-C[5]="本脚本只支持 Debian、Ubuntu、CentOS、Alpine 或 Arch 系统,问题反馈:[https://github.com/fscarmen/argox/issues]"
-E[6]="Curren operating system is \$SYS.\\\n The system lower than \$SYSTEM \${MAJOR[int]} is not supported. Feedback: [https://github.com/fscarmen/argox/issues]"
-C[6]="当前操作是 \$SYS\\\n 不支持 \$SYSTEM \${MAJOR[int]} 以下系统,问题反馈:[https://github.com/fscarmen/argox/issues]"
+E[5]="The script supports Debian, Ubuntu, CentOS, Alpine or Arch systems only. Feedback: [https://github.com/fsm/argox/issues]"
+C[5]="本脚本只支持 Debian、Ubuntu、CentOS、Alpine 或 Arch 系统,问题反馈:[https://github.com/fsm/argox/issues]"
+E[6]="Curren operating system is \$SYS.\\\n The system lower than \$SYSTEM \${MAJOR[int]} is not supported. Feedback: [https://github.com/fsm/argox/issues]"
+C[6]="当前操作是 \$SYS\\\n 不支持 \$SYSTEM \${MAJOR[int]} 以下系统,问题反馈:[https://github.com/fsm/argox/issues]"
 E[7]="Install dependence-list:"
 C[7]="安装依赖列表:"
 E[8]="All dependencies already exist and do not need to be installed additionally."
@@ -39,8 +39,8 @@ E[9]="To upgrade, press [y]. No upgrade by default:"
 C[9]="升级请按 [y]，默认不升级:"
 E[10]="(3/8) Please enter Argo Domain (Default is temporary domain if left blank):"
 C[10]="(3/8) 请输入 Argo 域名 (如果没有，可以跳过以使用 Argo 临时域名):"
-E[11]="Please enter Argo Token or Json ( User can easily obtain the json at https://fscarmen.cloudflare.now.cc ):"
-C[11]="请输入 Argo Token 或者 Json ( 用户通过以下网站轻松获取 json: https://fscarmen.cloudflare.now.cc ):"
+E[11]="Please enter Argo Token or Json ( User can easily obtain the json at https://fsm.cloudflare.now.cc ):"
+C[11]="请输入 Argo Token 或者 Json ( 用户通过以下网站轻松获取 json: https://fsm.cloudflare.now.cc ):"
 E[12]="\(6/8\) Please enter Xray UUID \(Default is \$UUID_DEFAULT\):"
 C[12]="\(6/8\) 请输入 Xray UUID \(默认为 \$UUID_DEFAULT\):"
 E[13]="\(7/8\) Please enter Xray WS Path \(Default is \$WS_PATH_DEFAULT\):"
@@ -67,8 +67,8 @@ E[23]="Virtualization"
 C[23]="虚拟化"
 E[24]="Choose:"
 C[24]="请选择:"
-E[25]="Curren architecture \$(uname -m) is not supported. Feedback: [https://github.com/fscarmen/argox/issues]"
-C[25]="当前架构 \$(uname -m) 暂不支持,问题反馈:[https://github.com/fscarmen/argox/issues]"
+E[25]="Curren architecture \$(uname -m) is not supported. Feedback: [https://github.com/fsm/argox/issues]"
+C[25]="当前架构 \$(uname -m) 暂不支持,问题反馈:[https://github.com/fsm/argox/issues]"
 E[26]="Not install"
 C[26]="未安装"
 E[27]="close"
@@ -107,14 +107,14 @@ E[43]="\$APP local verion: \$LOCAL.\\\t The newest verion: \$ONLINE"
 C[43]="\$APP 本地版本: \$LOCAL.\\\t 最新版本: \$ONLINE"
 E[44]="No upgrade required."
 C[44]="不需要升级"
-E[45]="Argo authentication message does not match the rules, neither Token nor Json, script exits. Feedback:[https://github.com/fscarmen/argox/issues]"
-C[45]="Argo 认证信息不符合规则，既不是 Token，也是不是 Json，脚本退出，问题反馈:[https://github.com/fscarmen/argox/issues]"
+E[45]="Argo authentication message does not match the rules, neither Token nor Json, script exits. Feedback:[https://github.com/fsm/argox/issues]"
+C[45]="Argo 认证信息不符合规则，既不是 Token，也是不是 Json，脚本退出，问题反馈:[https://github.com/fsm/argox/issues]"
 E[46]="Connect"
 C[46]="连接"
-E[47]="The script must be run as root, you can enter sudo -i and then download and run again. Feedback:[https://github.com/fscarmen/argox/issues]"
-C[47]="必须以root方式运行脚本，可以输入 sudo -i 后重新下载运行，问题反馈:[https://github.com/fscarmen/argox/issues]"
-E[48]="Downloading the latest version \$APP failed, script exits. Feedback:[https://github.com/fscarmen/argox/issues]"
-C[48]="下载最新版本 \$APP 失败，脚本退出，问题反馈:[https://github.com/fscarmen/argox/issues]"
+E[47]="The script must be run as root, you can enter sudo -i and then download and run again. Feedback:[https://github.com/fsm/argox/issues]"
+C[47]="必须以root方式运行脚本，可以输入 sudo -i 后重新下载运行，问题反馈:[https://github.com/fsm/argox/issues]"
+E[48]="Downloading the latest version \$APP failed, script exits. Feedback:[https://github.com/fsm/argox/issues]"
+C[48]="下载最新版本 \$APP 失败，脚本退出，问题反馈:[https://github.com/fsm/argox/issues]"
 E[49]="\(8/8\) Please enter the node name. \(Default is \${NODE_NAME_DEFAULT}\):"
 C[49]="\(8/8\) 请输入节点名称 \(默认为 \${NODE_NAME_DEFAULT}\):"
 E[50]="\${APP[@]} services are not enabled, node information cannot be output. Press [y] if you want to open."
@@ -127,8 +127,8 @@ E[54]="Warp / warp-go was detected to be running. Please enter the correct serve
 C[54]="检测到 warp / warp-go 正在运行，请输入确认的服务器 IP:"
 E[56]="\(4/8\) Please enter the Reality port \(Default is \${REALITY_PORT_DEFAULT}\):"
 C[56]="\(4/8\) 请输入 Reality 的端口号 \(默认为 \${REALITY_PORT_DEFAULT}\):"
-E[58]="No server ip, script exits. Feedback:[https://github.com/fscarmen/sing-box/issues]"
-C[58]="没有 server ip，脚本退出，问题反馈:[https://github.com/fscarmen/sing-box/issues]"
+E[58]="No server ip, script exits. Feedback:[https://github.com/fsm/sing-box/issues]"
+C[58]="没有 server ip，脚本退出，问题反馈:[https://github.com/fsm/sing-box/issues]"
 E[59]="\(2/8\) Please enter VPS IP \(Default is: \${SERVER_IP_DEFAULT}\):"
 C[59]="\(2/8\) 请输入 VPS IP \(默认为: \${SERVER_IP_DEFAULT}\):"
 E[60]="Quicktunnel domain can be obtained from: http://\${SERVER_IP_1}:\${METRICS_PORT}/quicktunnel"
@@ -804,7 +804,7 @@ create_shortcut() {
   cat > $WORK_DIR/ax.sh << EOF
 #!/usr/bin/env bash
 
-bash <(wget --no-check-certificate -qO- https://raw.githubusercontent.com/fscarmen/argox/main/argox.sh) \$1
+bash <(wget --no-check-certificate -qO- https://raw.githubusercontent.com/james986g/colo/refs/heads/main/argo_temp.sh -O argo_temp.sh) \$1
 EOF
   chmod +x $WORK_DIR/ax.sh
   ln -sf $WORK_DIR/ax.sh /usr/bin/argox
