@@ -28,7 +28,7 @@ chmod +x /usr/local/bin/cloudflared
 ```
 混淆s12脚本
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/james986g/colo/refs/heads/main/obfuscated.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/james986g/colo/main/obfuscated.sh)
 ```
 
 启动本地服务
