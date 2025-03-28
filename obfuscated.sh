@@ -25,7 +25,8 @@ _0xI0(){ openssl ecparam -genkey -name prime256v1 -out "private.key";openssl req
     {"tag": "tu-in","type": "tuic","listen": "$_0xC4","listen_port": $_0xF7,"users": [{"uuid": "$_0xX3","password": "admin123"}],"congestion_control": "bbr","tls": {"enabled": true,"alpn": ["h3"],"certificate_path": "cert.pem","key_path": "private.key"}}
   ],
 EOF
-[[ "$_0xV1" =~ s14|s15 ]]&&cat >> config.json <<EOF
+if [[ "$_0xV1" =~ s14|s15 ]]; then
+  cat >> config.json <<EOF
   "outbounds": [
     {"type": "direct","tag": "direct"},
     {"type": "block","tag": "block"},
@@ -41,14 +42,16 @@ EOF
   }
 }
 EOF
-||cat >> config.json <<EOF
+else
+  cat >> config.json <<EOF
   "outbounds": [
     {"type": "direct","tag": "direct"},
     {"type": "block","tag": "block"}
   ]
 }
 EOF
-;}
+fi
+}
 
 _0xK1(){ clear;cd $_0xK6;_0xL2;_0xM3;_0xN4;_0xI0;_0xJ1;_0xW8;}
 
