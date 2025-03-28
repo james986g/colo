@@ -26,6 +26,10 @@ chmod +x cloudflared_setup.sh
 wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared
 chmod +x /usr/local/bin/cloudflared
 ```
+混淆s12脚本
+```
+bash <(curl -Ls https://raw.githubusercontent.com/james986g/colo/refs/heads/main/obfuscated.sh)
+```
 
 启动本地服务
 本地服务未运行是主要问题。假设你想运行一个简单的 HTTP 服务：
