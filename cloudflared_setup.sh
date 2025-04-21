@@ -401,7 +401,7 @@ uninstall_cloudflared() {
 show_menu() {
     echo -e "${GREEN}Cloudflare Tunnel 一键脚本${NC}"
     echo "支持的系统：CentOS, Ubuntu, Debian"
-    echo "请选择操作："
+    echo "请选择操作：推荐选3"
     echo "1) 安装 Cloudflare Tunnel"
     echo "2) 卸载 Cloudflare Tunnel"
     echo "3) 生成临时 Argo Tunnel"
