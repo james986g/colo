@@ -415,7 +415,37 @@ replace_argo_tunnel() {
     setup_argo_service
     echo -e "${GREEN}已成功更换为临时 Argo 隧道${NC}"
 }
+# 安装快捷命令 argox
+install_shortcut() {
+    echo -e "${GREEN}安装快捷命令 'argox'...${NC}"
+    SCRIPT_PATH="/usr/local/bin/argox"
 
+    # 检查是否已存在 argox 命令
+    if [ -f "$SCRIPT_PATH" ]; then
+        echo -e "${YELLOW}检测到现有的 argox 命令，正在覆盖...${NC}"
+        rm -f "$SCRIPT_PATH"
+    fi
+
+    # 复制脚本到 /usr/local/bin/argox
+    cp "$0" "$SCRIPT_PATH" || {
+        echo -e "${RED}无法复制脚本到 $SCRIPT_PATH，请检查权限${NC}"
+        exit 1
+    }
+
+    # 设置可执行权限
+    chmod +x "$SCRIPT_PATH" || {
+        echo -e "${RED}无法设置 $SCRIPT_PATH 的可执行权限${NC}"
+        exit 1
+    }
+
+    # 验证安装
+    if command -v argox &>/dev/null; then
+        echo -e "${GREEN}快捷命令 'argox' 安装成功！现在可以使用 'argox' 运行脚本${NC}"
+    else
+        echo -e "${RED}快捷命令 'argox' 安装失败，请检查 /usr/local/bin 是否在 PATH 中${NC}"
+        exit 1
+    fi
+}
 # 卸载 Cloudflare Tunnel
 uninstall_cloudflared() {
     echo -e "${GREEN}开始卸载 Cloudflare Tunnel...${NC}"
@@ -426,6 +456,7 @@ uninstall_cloudflared() {
     pkill -f "cloudflared.*tunnel.*run" 2>/dev/null
     rm -f /usr/local/bin/cloudflared
     rm -f /usr/bin/cloudflared
+    rm -f /usr/local/bin/argox
     rm -rf ~/.cloudflared/
     rm -rf /etc/cloudflared/
     rm -f /tmp/cloudflared.{deb,rpm} 2>/dev/null
@@ -437,11 +468,12 @@ show_menu() {
     echo -e "${GREEN}Cloudflare Tunnel 一键脚本${NC}"
     echo "支持的系统：CentOS, Ubuntu, Debian"
     echo "请选择操作：推荐选3"
-    echo "1) 安装 Cloudflare Tunnel（需要拥有挂在CF的域名）"
+    echo "1) 安装 Cloudflare Tunnel"
     echo "2) 卸载 Cloudflare Tunnel"
-    echo "3) 生成临时 Argo Tunnel（无需域名使用临时域名，首选）"
+    echo "3) 生成临时 Argo Tunnel"
     echo "4) 更换为临时 Argo 隧道"
     echo "5) 退出"
+    echo "6) 安装快捷命令 'argox'"  # 新增选项
     echo -e "${YELLOW}快捷键：按 't' 快速生成临时隧道${NC}"
 }
 
@@ -449,7 +481,7 @@ show_menu() {
 check_dependencies
 while true; do
     show_menu
-    read -p "输入选项 (1-5 或快捷键): " CHOICE
+    read -p "输入选项 (1-6 或快捷键): " CHOICE
     case $CHOICE in
         1)
             case $OS in
@@ -473,11 +505,14 @@ while true; do
             echo -e "${GREEN}退出脚本${NC}"
             exit 0
             ;;
+        6)
+            install_shortcut
+            ;;
         t)
             setup_argo_service
             ;;
         *)
-            echo -e "${RED}无效选项，请输入 1-5 或 't'${NC}"
+            echo -e "${RED}无效选项，请输入 1-6 或 't'${NC}"
             ;;
     esac
 done
