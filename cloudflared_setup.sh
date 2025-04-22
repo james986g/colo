@@ -392,7 +392,9 @@ uninstall_cloudflared() {
     systemctl daemon-reload
     pkill -f "cloudflared.*tunnel.*run" 2>/dev/null
     rm -f /usr/local/bin/cloudflared
-    rm -rf /root/.cloudflared /etc/cloudflared
+    rm -f /usr/bin/cloudflared
+    rm -rf ~/.cloudflared/
+    rm -rf /etc/cloudflared/
     rm -f /tmp/cloudflared.{deb,rpm} 2>/dev/null
     echo -e "${GREEN}Cloudflare Tunnel 已完全卸载${NC}"
 }
