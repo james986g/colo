@@ -262,7 +262,7 @@ setup_argo_service() {
     LOCAL_PORT=$(echo "$LOCAL_SERVICE" | grep -oP '(?<=:)\d+')
     if ! ss -tuln | grep -q ":${LOCAL_PORT} "; then
         echo -e "${RED}错误：本地服务 $LOCAL_SERVICE 未运行${NC}"
-        echo "请先启动本地服务，例如：'python -m http.server $LOCAL_PORT&'"
+        echo "请先启动本地服务，例如：'python -m http.server $LOCAL_PORT &'"
         exit 1
     fi
 
