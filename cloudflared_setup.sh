@@ -103,8 +103,37 @@ install_cloudflared() {
         "ubuntu"|"debian")
             echo -e "${GREEN}安装 Cloudflared for $OS...${NC}"
             CF_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$([ "$ARCH" = "x86_64" ] && echo "amd64.deb" || echo "arm64.deb")"
-            download_cloudflared "$CF_URL" && dpkg -i /usr/local/bin/cloudflared || apt-get install -f -y
-            rm -f /usr/local/bin/cloudflared.deb
+            DEB_FILE="/tmp/cloudflared.deb"
+
+            # 清理可能的旧文件
+            [ -f "$DEB_FILE" ] && rm -f "$DEB_FILE"
+            if [ -f /usr/local/bin/cloudflared ] || [ -f /usr/bin/cloudflared ]; then
+                echo -e "${YELLOW}检测到现有 cloudflared 文件，正在备份和清理...${NC}"
+                [ -f /usr/local/bin/cloudflared ] && mv /usr/local/bin/cloudflared /usr/local/bin/cloudflared.bak
+                [ -f /usr/bin/cloudflared ] && mv /usr/bin/cloudflared /usr/bin/cloudflared.bak
+            fi
+
+            # 下载 .deb 包到临时目录
+            download_cloudflared "$CF_URL" && mv /usr/local/bin/cloudflared "$DEB_FILE"
+            if [ ! -f "$DEB_FILE" ]; then
+                echo -e "${RED}下载 .deb 包失败，请检查网络！${NC}"
+                exit 1
+            fi
+
+            # 安装 .deb 包
+            dpkg -i "$DEB_FILE" || {
+                echo -e "${YELLOW}尝试修复依赖问题...${NC}"
+                apt-get update -y && apt-get install -f -y
+            }
+
+            # 清理临时文件
+            rm -f "$DEB_FILE"
+
+            # 验证安装
+            if ! command -v cloudflared &>/dev/null; then
+                echo -e "${RED}Cloudflared 安装失败，请检查 /var/log/dpkg.log${NC}"
+                exit 1
+            fi
             ;;
         *)
             echo -e "${RED}不支持的操作系统：$OS${NC}"
@@ -112,12 +141,16 @@ install_cloudflared() {
             ;;
     esac
 
-    chmod +x /usr/local/bin/cloudflared
-    /usr/local/bin/cloudflared --version &>/dev/null || {
-        echo -e "${RED}Cloudflared 安装失败${NC}"
+    # 确保二进制文件可执行
+    [ -f /usr/local/bin/cloudflared ] && chmod +x /usr/local/bin/cloudflared
+    [ -f /usr/bin/cloudflared ] && chmod +x /usr/bin/cloudflared
+
+    # 验证版本
+    /usr/local/bin/cloudflared --version &>/dev/null || /usr/bin/cloudflared --version &>/dev/null || {
+        echo -e "${RED}Cloudflared 安装失败，无法获取版本信息${NC}"
         exit 1
     }
-    echo -e "${GREEN}Cloudflared 安装成功，版本：$(/usr/local/bin/cloudflared --version)${NC}"
+    echo -e "${GREEN}Cloudflared 安装成功，版本：$(/usr/local/bin/cloudflared --version || /usr/bin/cloudflared --version)${NC}"
 }
 
 # Cloudflare 登录
